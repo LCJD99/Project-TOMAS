@@ -1,0 +1,243 @@
+# K8s Resource Constraint Pod Configurations
+# This file contains multiple Pod configurations for resource constraint experiments
+# GPU configurations use vGPU with 3090 GPU (24GB total memory)
+
+---
+# Configuration 1: Minimal resources
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-experiment-1core-512m-025gpu-1g
+  namespace: default
+spec:
+  schedulerName: hami-scheduler
+  restartPolicy: Never
+  containers:
+  - name: inference-container
+    image: docker.cnb.cool/lcjd1024/os
+    command: ["python", "/app/k8s_inference.py"]
+    args: ["--task", "SuperResolution", "--gpu_memory", "1GB", "--device", "cuda", "--output_file", "/tmp/result.json"]
+    resources:
+      requests:
+        cpu: "1"
+        memory: "512Mi"
+        nvidia.com/gpu: 0.25
+        nvidia.com/gpumem: 1000
+      limits:
+        cpu: "1"
+        memory: "512Mi" 
+        nvidia.com/gpu: 0.25
+        nvidia.com/gpumem: 1000
+    env:
+    - name: NVIDIA_VISIBLE_DEVICES
+      value: all
+    - name: NVIDIA_DRIVER_CAPABILITIES
+      value: all
+    - name: HF_HOME
+      value: /huggingface_cache
+    volumeMounts:
+    - name: huggingface-cache
+      mountPath: /huggingface_cache
+    - name: app-code
+      mountPath: /app
+  volumes:
+  - name: huggingface-cache
+    hostPath:
+      path: /home/user/.cache/huggingface
+      type: Directory
+  - name: app-code
+    hostPath:
+      path: /Users/lcjd/code-workspace/project/Project-TOMAS/experiments/02_resource-constraint
+      type: Directory
+
+---
+# Configuration 2: Low resources
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-experiment-2core-800m-05gpu-3g
+  namespace: default
+spec:
+  schedulerName: hami-scheduler
+  restartPolicy: Never
+  containers:
+  - name: inference-container
+    image: docker.cnb.cool/lcjd1024/os
+    command: ["python", "/app/k8s_inference.py"]
+    args: ["--task", "SuperResolution", "--gpu_memory", "3GB", "--device", "cuda", "--output_file", "/tmp/result.json"]
+    resources:
+      requests:
+        cpu: "2"
+        memory: "800Mi"
+        nvidia.com/gpu: 0.5
+        nvidia.com/gpumem: 3000
+      limits:
+        cpu: "2"
+        memory: "800Mi"
+        nvidia.com/gpu: 0.5
+        nvidia.com/gpumem: 3000
+    env:
+    - name: NVIDIA_VISIBLE_DEVICES
+      value: all
+    - name: NVIDIA_DRIVER_CAPABILITIES
+      value: all
+    - name: HF_HOME
+      value: /huggingface_cache
+    volumeMounts:
+    - name: huggingface-cache
+      mountPath: /huggingface_cache
+    - name: app-code
+      mountPath: /app
+  volumes:
+  - name: huggingface-cache
+    hostPath:
+      path: /home/user/.cache/huggingface
+      type: Directory
+  - name: app-code
+    hostPath:
+      path: /Users/lcjd/code-workspace/project/Project-TOMAS/experiments/02_resource-constraint
+      type: Directory
+
+---
+# Configuration 3: Medium resources
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-experiment-4core-1g-075gpu-6g
+  namespace: default
+spec:
+  schedulerName: hami-scheduler
+  restartPolicy: Never
+  containers:
+  - name: inference-container
+    image: docker.cnb.cool/lcjd1024/os
+    command: ["python", "/app/k8s_inference.py"]
+    args: ["--task", "SuperResolution", "--gpu_memory", "6GB", "--device", "cuda", "--output_file", "/tmp/result.json"]
+    resources:
+      requests:
+        cpu: "4"
+        memory: "1Gi"
+        nvidia.com/gpu: 0.75
+        nvidia.com/gpumem: 6000
+      limits:
+        cpu: "4"
+        memory: "1Gi"
+        nvidia.com/gpu: 0.75
+        nvidia.com/gpumem: 6000
+    env:
+    - name: NVIDIA_VISIBLE_DEVICES
+      value: all
+    - name: NVIDIA_DRIVER_CAPABILITIES
+      value: all
+    - name: HF_HOME
+      value: /huggingface_cache
+    volumeMounts:
+    - name: huggingface-cache
+      mountPath: /huggingface_cache
+    - name: app-code
+      mountPath: /app
+  volumes:
+  - name: huggingface-cache
+    hostPath:
+      path: /home/user/.cache/huggingface
+      type: Directory
+  - name: app-code
+    hostPath:
+      path: /Users/lcjd/code-workspace/project/Project-TOMAS/experiments/02_resource-constraint
+      type: Directory
+
+---
+# Configuration 4: High resources
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-experiment-8core-2g-1gpu-12g
+  namespace: default
+spec:
+  schedulerName: hami-scheduler
+  restartPolicy: Never
+  containers:
+  - name: inference-container
+    image: docker.cnb.cool/lcjd1024/os
+    command: ["python", "/app/k8s_inference.py"]
+    args: ["--task", "SuperResolution", "--gpu_memory", "12GB", "--device", "cuda", "--output_file", "/tmp/result.json"]
+    resources:
+      requests:
+        cpu: "8"
+        memory: "2Gi"
+        nvidia.com/gpu: 1.0
+        nvidia.com/gpumem: 12000
+      limits:
+        cpu: "8"
+        memory: "2Gi"
+        nvidia.com/gpu: 1.0
+        nvidia.com/gpumem: 12000
+    env:
+    - name: NVIDIA_VISIBLE_DEVICES
+      value: all
+    - name: NVIDIA_DRIVER_CAPABILITIES
+      value: all
+    - name: HF_HOME
+      value: /huggingface_cache
+    volumeMounts:
+    - name: huggingface-cache
+      mountPath: /huggingface_cache
+    - name: app-code
+      mountPath: /app
+  volumes:
+  - name: huggingface-cache
+    hostPath:
+      path: /home/user/.cache/huggingface
+      type: Directory
+  - name: app-code
+    hostPath:
+      path: /Users/lcjd/code-workspace/project/Project-TOMAS/experiments/02_resource-constraint
+      type: Directory
+
+---
+# Configuration 5: Maximum resources
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-experiment-16core-4g-1gpu-20g
+  namespace: default
+spec:
+  schedulerName: hami-scheduler
+  restartPolicy: Never
+  containers:
+  - name: inference-container
+    image: docker.cnb.cool/lcjd1024/os
+    command: ["python", "/app/k8s_inference.py"]
+    args: ["--task", "SuperResolution", "--gpu_memory", "20GB", "--device", "cuda", "--output_file", "/tmp/result.json"]
+    resources:
+      requests:
+        cpu: "16"
+        memory: "4Gi"
+        nvidia.com/gpu: 1.0
+        nvidia.com/gpumem: 20000
+      limits:
+        cpu: "16"
+        memory: "4Gi"
+        nvidia.com/gpu: 1.0
+        nvidia.com/gpumem: 20000
+    env:
+    - name: NVIDIA_VISIBLE_DEVICES
+      value: all
+    - name: NVIDIA_DRIVER_CAPABILITIES
+      value: all
+    - name: HF_HOME
+      value: /huggingface_cache
+    volumeMounts:
+    - name: huggingface-cache
+      mountPath: /huggingface_cache
+    - name: app-code
+      mountPath: /app
+  volumes:
+  - name: huggingface-cache
+    hostPath:
+      path: /home/user/.cache/huggingface
+      type: Directory
+  - name: app-code
+    hostPath:
+      path: /Users/lcjd/code-workspace/project/Project-TOMAS/experiments/02_resource-constraint
+      type: Directory
