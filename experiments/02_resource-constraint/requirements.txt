@@ -1,0 +1,7 @@
+torch
+transformers
+accelerate
+Pillow
+torchvision
+click
+psutil
