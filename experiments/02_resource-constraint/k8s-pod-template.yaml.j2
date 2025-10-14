@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ pod_name }}
+  namespace: {{ namespace }}
+  labels:
+    experiment: resource-constraint
+    config: {{ config_name }}
+    task: {{ task }}
+spec:
+  schedulerName: {{ scheduler_name }}
+  restartPolicy: Never
+  containers:
+  - name: inference-container
+    image: {{ image }}
+    command: ["python", "inference.py"]
+    args: 
+      - "--gpu_memory"
+      - "{{ gpu_memory }}Mi"
+      - "--task"
+      - "{{ task }}"
+      - "--device"
+      - "{{ device }}"
+      - "--image_path"
+      - "{{ image_path }}"
+    resources:
+      requests:
+        cpu: {{ cpu_cores }}
+        memory: {{ cpu_memory }}
+        nvidia.com/gpu: {{ gpu_fraction }}
+        nvidia.com/gpumem: {{ gpu_memory }}
+      limits:
+        cpu: {{ cpu_cores }}
+        memory: {{ cpu_memory }}
+        nvidia.com/gpu: {{ gpu_fraction }}
+        nvidia.com/gpumem: {{ gpu_memory }}
+    env:
+    - name: NVIDIA_VISIBLE_DEVICES
+      value: all
+    - name: NVIDIA_DRIVER_CAPABILITIES
+      value: all
+    - name: HF_HOME
+      value: /huggingface_cache
+    volumeMounts:
+    - name: huggingface-cache
+      mountPath: /huggingface_cache
+    - name: inference-script
+      mountPath: /app/inference.py
+      subPath: inference.py
+    - name: test-image
+      mountPath: /app/{{ image_path }}
+      subPath: {{ image_path }}
+  volumes:
+  - name: huggingface-cache
+    hostPath:
+      path: /home/lcjd/.cache/huggingface
+      type: Directory
+  - name: inference-script
+    configMap:
+      name: inference-script
+  - name: test-image
+    configMap:
+      name: test-image
+      items:
+      - key: {{ image_path }}
+        path: {{ image_path }}

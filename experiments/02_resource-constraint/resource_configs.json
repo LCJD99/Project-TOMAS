@@ -1,0 +1,75 @@
+{
+  "resource_constraints": [
+    {
+      "name": "low-resource",
+      "cpu_cores": "1",
+      "cpu_memory": "1Gi",
+      "gpu_fraction": "0.25",
+      "gpu_memory": "6000"
+    },
+    {
+      "name": "medium-resource-1",
+      "cpu_cores": "2",
+      "cpu_memory": "2Gi",
+      "gpu_fraction": "0.5",
+      "gpu_memory": "12000"
+    },
+    {
+      "name": "medium-resource-2",
+      "cpu_cores": "4",
+      "cpu_memory": "4Gi",
+      "gpu_fraction": "0.5",
+      "gpu_memory": "12000"
+    },
+    {
+      "name": "high-resource-1",
+      "cpu_cores": "8",
+      "cpu_memory": "8Gi",
+      "gpu_fraction": "1.0",
+      "gpu_memory": "24000"
+    },
+    {
+      "name": "high-resource-2",
+      "cpu_cores": "16",
+      "cpu_memory": "16Gi",
+      "gpu_fraction": "1.0",
+      "gpu_memory": "24000"
+    },
+    {
+      "name": "cpu-constrained",
+      "cpu_cores": "1",
+      "cpu_memory": "8Gi",
+      "gpu_fraction": "1.0",
+      "gpu_memory": "24000"
+    },
+    {
+      "name": "memory-constrained",
+      "cpu_cores": "8",
+      "cpu_memory": "1Gi",
+      "gpu_fraction": "1.0",
+      "gpu_memory": "24000"
+    },
+    {
+      "name": "gpu-memory-constrained",
+      "cpu_cores": "8",
+      "cpu_memory": "8Gi",
+      "gpu_fraction": "1.0",
+      "gpu_memory": "6000"
+    },
+    {
+      "name": "gpu-fraction-constrained",
+      "cpu_cores": "8",
+      "cpu_memory": "8Gi",
+      "gpu_fraction": "0.25",
+      "gpu_memory": "24000"
+    }
+  ],
+  "tasks": ["SuperResolution", "ImageCaptioning", "ObjectDetection"],
+  "experiment_config": {
+    "namespace": "default",
+    "image": "docker.cnb.cool/lcjd1024/os",
+    "scheduler_name": "hami-scheduler",
+    "image_path": "lena.png",
+    "device": "cuda"
+  }
+}
