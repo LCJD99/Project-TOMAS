@@ -22,7 +22,7 @@ spec:
       - "--device"
       - "{{ device }}"
       - "--image_path"
-      - "{{ image_path }}"
+      - "/app/experiment-data/{{ image_path }}"
     resources:
       requests:
         cpu: {{ cpu_cores }}
@@ -47,9 +47,8 @@ spec:
     - name: inference-script
       mountPath: /app/inference.py
       subPath: inference.py
-    - name: test-image
-      mountPath: /app/{{ image_path }}
-      subPath: {{ image_path }}
+    - name: experiment-data
+      mountPath: /app/experiment-data
   volumes:
   - name: huggingface-cache
     hostPath:
@@ -58,9 +57,7 @@ spec:
   - name: inference-script
     configMap:
       name: inference-script
-  - name: test-image
-    configMap:
-      name: test-image
-      items:
-      - key: {{ image_path }}
-        path: {{ image_path }}
+  - name: experiment-data
+    hostPath:
+      path: /Users/lcjd/code-workspace/project/Project-TOMAS/experiments/02_resource-constraint
+      type: Directory

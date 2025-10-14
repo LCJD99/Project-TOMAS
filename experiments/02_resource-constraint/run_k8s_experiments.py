@@ -51,14 +51,14 @@ class MainExperimentRunner:
         print("Checking prerequisites...")
         
         # Check kubectl
-        result = self._run_command(['kubectl', 'version', '--client'])
+        result = self._run_command(['k3s', 'kubectl', 'version', '--client'])
         if result.returncode != 0:
             print("Error: kubectl is not installed or not accessible")
             return False
         print("✓ kubectl is available")
         
         # Check cluster connectivity
-        result = self._run_command(['kubectl', 'cluster-info'])
+        result = self._run_command(['k3s', 'kubectl', 'cluster-info'])
         if result.returncode != 0:
             print("Error: Cannot connect to Kubernetes cluster")
             return False
@@ -103,6 +103,7 @@ class MainExperimentRunner:
         # Create ConfigMap for inference script
         inference_script = self.work_dir / 'inference.py'
         result = self._run_command([
+            'k3s',
             'kubectl',
             'create',
             'configmap',
@@ -120,9 +121,9 @@ class MainExperimentRunner:
             return False
         
         # Apply the ConfigMap
-        apply_result = self._run_command(['kubectl', 'apply', '-f', '-'], cwd=str(self.work_dir))
+        print("Applying inference-script ConfigMap...")
         apply_process = subprocess.Popen(
-            ['kubectl', 'apply', '-f', '-'],
+            ['k3s', 'kubectl', 'apply', '-f', '-'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -135,41 +136,7 @@ class MainExperimentRunner:
             print(f"Error applying inference script ConfigMap: {stderr}")
             return False
         print("✓ inference-script ConfigMap created")
-        
-        # Create ConfigMap for test image
-        test_image = self.work_dir / 'lena.png'
-        result = self._run_command([
-            'kubectl',
-            'create',
-            'configmap',
-            'test-image',
-            f'--from-file=lena.png={test_image}',
-            '-n',
-            self.namespace,
-            '--dry-run=client',
-            '-o',
-            'yaml'
-        ])
-        
-        if result.returncode != 0:
-            print(f"Error creating test image ConfigMap: {result.stderr}")
-            return False
-        
-        # Apply the ConfigMap
-        apply_process = subprocess.Popen(
-            ['kubectl', 'apply', '-f', '-'],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            cwd=str(self.work_dir)
-        )
-        stdout, stderr = apply_process.communicate(input=result.stdout)
-        
-        if apply_process.returncode != 0:
-            print(f"Error applying test image ConfigMap: {stderr}")
-            return False
-        print("✓ test-image ConfigMap created")
+        print("✓ Using hostPath for test image (lena.png) - no ConfigMap needed")
         
         return True
     
@@ -177,9 +144,10 @@ class MainExperimentRunner:
         """Clean up ConfigMaps created for the experiments."""
         print("\nCleaning up ConfigMaps...")
         
-        configmaps = ['inference-script', 'test-image']
+        configmaps = ['inference-script']
         for configmap in configmaps:
             result = self._run_command([
+                'k3s',
                 'kubectl',
                 'delete',
                 'configmap',

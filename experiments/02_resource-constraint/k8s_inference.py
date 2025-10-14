@@ -71,6 +71,7 @@ class K8sExperimentRunner:
         while time.time() - start_time < timeout:
             # Check pod status
             result = self._run_command([
+                'k3s',
                 'kubectl',
                 'get',
                 'pod',
@@ -94,6 +95,7 @@ class K8sExperimentRunner:
             if phase in ['Succeeded', 'Failed']:
                 # Pod completed, get logs
                 log_result = self._run_command([
+                    'k3s',
                     'kubectl',
                     'logs',
                     pod_name,
@@ -103,6 +105,7 @@ class K8sExperimentRunner:
                 
                 # Get additional pod information
                 info_result = self._run_command([
+                    'k3s',
                     'kubectl',
                     'get',
                     'pod',
@@ -232,7 +235,7 @@ class K8sExperimentRunner:
         print(f"{'='*60}")
         
         # Apply the pod configuration
-        apply_result = self._run_command(['kubectl', 'apply', '-f', yaml_file])
+        apply_result = self._run_command(['k3s', 'kubectl', 'apply', '-f', yaml_file])
         
         if apply_result.returncode != 0:
             return {
@@ -255,6 +258,7 @@ class K8sExperimentRunner:
         
         # Clean up the pod
         cleanup_result = self._run_command([
+            'k3s',
             'kubectl',
             'delete',
             'pod',
