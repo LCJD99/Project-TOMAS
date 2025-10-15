@@ -12,15 +12,14 @@ spec:
   containers:
   - name: demo-container
     image: docker.cnb.cool/lcjd1024/os/mypython
-    command: ["python", "run.py"]
-    # command: ["sleep", "36000"]
+    command: ["python", "inference.py"]
     volumeMounts:
     - name: cache-volume
       mountPath: /root/.cache/huggingface
     - name: data-volume
       mountPath: /app/data
     - name: code-volume
-      mountPath: /app/run.py
+      mountPath: /app/inference.py
     resources:
       requests:
         cpu: 1
@@ -45,9 +44,9 @@ spec:
       type: Directory
   - name: data-volume
     hostPath: 
-      path: /home/zhangjingzhou/tool-planning/Project-TOMAS/experiments/02_resource-constraint/data
+      path: ./data
       type: Directory
   - name: code-volume
     hostPath: 
-      path: /home/zhangjingzhou/tool-planning/Project-TOMAS/experiments/02_resource-constraint/inference.py
+      path: ./inference.py
       type: File

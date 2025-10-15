@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ pod_name }}
+  namespace: {{ namespace | default('default') }}
+  labels:
+    experiment: {{ experiment_label | default('demo') }}
+    task: {{ task | default('inference') }}
+    resource-config: {{ config_name }}
+spec:
+  schedulerName: {{ scheduler_name | default('hami-scheduler') }}
+  restartPolicy: {{ restart_policy | default('Never') }}
+
+  containers:
+  - name: {{ container_name | default('demo-container') }}
+    image: {{ image | default('docker.cnb.cool/lcjd1024/os/mypython') }}
+    command: {{ command | default(['python', 'run.py']) }}
+    {%- if task_type %}
+    args: ["--task", "{{ task_type }}"]
+    {%- endif %}
+
+    volumeMounts:
+    - name: cache-volume
+      mountPath: /root/.cache/huggingface
+    - name: data-volume
+      mountPath: /app/data
+    - name: code-volume
+      mountPath: /app/inference.py
+    resources:
+      requests:
+        cpu: {{ resources.cpu }}
+        memory: {{ resources.memory }}
+        nvidia.com/gpu: {{ resources.gpu }}
+        nvidia.com/gpumem: {{ resources.gpumem }}
+      limits:
+        cpu: {{ resources.cpu }}
+        memory: {{ resources.memory }}
+        nvidia.com/gpu: {{ resources.gpu }}
+        nvidia.com/gpumem: {{ resources.gpumem }}
+    env:
+    - name: NVIDIA_VISIBLE_DEVICES
+      value: {{ nvidia_visible_devices | default('all') }}
+    - name: HF_HOME
+      value: {{ hf_home | default('/root/.cache/huggingface') }}
+    {%- if additional_env_vars %}
+    {%- for env_var in additional_env_vars %}
+    - name: {{ env_var.name }}
+      value: {{ env_var.value }}
+    {%- endfor %}
+    {%- endif %}
+
+  volumes:
+  - name: cache-volume
+    hostPath: 
+      path: {{ cache_volume_path | default('/home/zhangjingzhou/.cache/huggingface') }}
+      type: Directory
+  - name: data-volume
+    hostPath: 
+      path: {{ data_volume_path | default('./data') }}
+      type: Directory
+  - name: code-volume
+    hostPath: 
+      path: {{ code_volume_path | default('./inference.py') }}
+      type: File
