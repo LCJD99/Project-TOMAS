@@ -1,0 +1,329 @@
+{
+  "total_configs": 27,
+  "configurations": [
+    {
+      "pod_name": "inference-low-resource-superresolution",
+      "config_name": "low-resource",
+      "task": "SuperResolution",
+      "yaml_file": "k8s-configs/inference-low-resource-superresolution.yaml",
+      "resources": {
+        "cpu_cores": "1",
+        "cpu_memory": "1Gi",
+        "gpu_fraction": "0.25",
+        "gpu_memory": "6000"
+      }
+    },
+    {
+      "pod_name": "inference-low-resource-imagecaptioning",
+      "config_name": "low-resource",
+      "task": "ImageCaptioning",
+      "yaml_file": "k8s-configs/inference-low-resource-imagecaptioning.yaml",
+      "resources": {
+        "cpu_cores": "1",
+        "cpu_memory": "1Gi",
+        "gpu_fraction": "0.25",
+        "gpu_memory": "6000"
+      }
+    },
+    {
+      "pod_name": "inference-low-resource-objectdetection",
+      "config_name": "low-resource",
+      "task": "ObjectDetection",
+      "yaml_file": "k8s-configs/inference-low-resource-objectdetection.yaml",
+      "resources": {
+        "cpu_cores": "1",
+        "cpu_memory": "1Gi",
+        "gpu_fraction": "0.25",
+        "gpu_memory": "6000"
+      }
+    },
+    {
+      "pod_name": "inference-medium-resource-1-superresolution",
+      "config_name": "medium-resource-1",
+      "task": "SuperResolution",
+      "yaml_file": "k8s-configs/inference-medium-resource-1-superresolution.yaml",
+      "resources": {
+        "cpu_cores": "2",
+        "cpu_memory": "2Gi",
+        "gpu_fraction": "0.5",
+        "gpu_memory": "12000"
+      }
+    },
+    {
+      "pod_name": "inference-medium-resource-1-imagecaptioning",
+      "config_name": "medium-resource-1",
+      "task": "ImageCaptioning",
+      "yaml_file": "k8s-configs/inference-medium-resource-1-imagecaptioning.yaml",
+      "resources": {
+        "cpu_cores": "2",
+        "cpu_memory": "2Gi",
+        "gpu_fraction": "0.5",
+        "gpu_memory": "12000"
+      }
+    },
+    {
+      "pod_name": "inference-medium-resource-1-objectdetection",
+      "config_name": "medium-resource-1",
+      "task": "ObjectDetection",
+      "yaml_file": "k8s-configs/inference-medium-resource-1-objectdetection.yaml",
+      "resources": {
+        "cpu_cores": "2",
+        "cpu_memory": "2Gi",
+        "gpu_fraction": "0.5",
+        "gpu_memory": "12000"
+      }
+    },
+    {
+      "pod_name": "inference-medium-resource-2-superresolution",
+      "config_name": "medium-resource-2",
+      "task": "SuperResolution",
+      "yaml_file": "k8s-configs/inference-medium-resource-2-superresolution.yaml",
+      "resources": {
+        "cpu_cores": "4",
+        "cpu_memory": "4Gi",
+        "gpu_fraction": "0.5",
+        "gpu_memory": "12000"
+      }
+    },
+    {
+      "pod_name": "inference-medium-resource-2-imagecaptioning",
+      "config_name": "medium-resource-2",
+      "task": "ImageCaptioning",
+      "yaml_file": "k8s-configs/inference-medium-resource-2-imagecaptioning.yaml",
+      "resources": {
+        "cpu_cores": "4",
+        "cpu_memory": "4Gi",
+        "gpu_fraction": "0.5",
+        "gpu_memory": "12000"
+      }
+    },
+    {
+      "pod_name": "inference-medium-resource-2-objectdetection",
+      "config_name": "medium-resource-2",
+      "task": "ObjectDetection",
+      "yaml_file": "k8s-configs/inference-medium-resource-2-objectdetection.yaml",
+      "resources": {
+        "cpu_cores": "4",
+        "cpu_memory": "4Gi",
+        "gpu_fraction": "0.5",
+        "gpu_memory": "12000"
+      }
+    },
+    {
+      "pod_name": "inference-high-resource-1-superresolution",
+      "config_name": "high-resource-1",
+      "task": "SuperResolution",
+      "yaml_file": "k8s-configs/inference-high-resource-1-superresolution.yaml",
+      "resources": {
+        "cpu_cores": "8",
+        "cpu_memory": "8Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "24000"
+      }
+    },
+    {
+      "pod_name": "inference-high-resource-1-imagecaptioning",
+      "config_name": "high-resource-1",
+      "task": "ImageCaptioning",
+      "yaml_file": "k8s-configs/inference-high-resource-1-imagecaptioning.yaml",
+      "resources": {
+        "cpu_cores": "8",
+        "cpu_memory": "8Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "24000"
+      }
+    },
+    {
+      "pod_name": "inference-high-resource-1-objectdetection",
+      "config_name": "high-resource-1",
+      "task": "ObjectDetection",
+      "yaml_file": "k8s-configs/inference-high-resource-1-objectdetection.yaml",
+      "resources": {
+        "cpu_cores": "8",
+        "cpu_memory": "8Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "24000"
+      }
+    },
+    {
+      "pod_name": "inference-high-resource-2-superresolution",
+      "config_name": "high-resource-2",
+      "task": "SuperResolution",
+      "yaml_file": "k8s-configs/inference-high-resource-2-superresolution.yaml",
+      "resources": {
+        "cpu_cores": "16",
+        "cpu_memory": "16Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "24000"
+      }
+    },
+    {
+      "pod_name": "inference-high-resource-2-imagecaptioning",
+      "config_name": "high-resource-2",
+      "task": "ImageCaptioning",
+      "yaml_file": "k8s-configs/inference-high-resource-2-imagecaptioning.yaml",
+      "resources": {
+        "cpu_cores": "16",
+        "cpu_memory": "16Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "24000"
+      }
+    },
+    {
+      "pod_name": "inference-high-resource-2-objectdetection",
+      "config_name": "high-resource-2",
+      "task": "ObjectDetection",
+      "yaml_file": "k8s-configs/inference-high-resource-2-objectdetection.yaml",
+      "resources": {
+        "cpu_cores": "16",
+        "cpu_memory": "16Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "24000"
+      }
+    },
+    {
+      "pod_name": "inference-cpu-constrained-superresolution",
+      "config_name": "cpu-constrained",
+      "task": "SuperResolution",
+      "yaml_file": "k8s-configs/inference-cpu-constrained-superresolution.yaml",
+      "resources": {
+        "cpu_cores": "1",
+        "cpu_memory": "8Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "24000"
+      }
+    },
+    {
+      "pod_name": "inference-cpu-constrained-imagecaptioning",
+      "config_name": "cpu-constrained",
+      "task": "ImageCaptioning",
+      "yaml_file": "k8s-configs/inference-cpu-constrained-imagecaptioning.yaml",
+      "resources": {
+        "cpu_cores": "1",
+        "cpu_memory": "8Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "24000"
+      }
+    },
+    {
+      "pod_name": "inference-cpu-constrained-objectdetection",
+      "config_name": "cpu-constrained",
+      "task": "ObjectDetection",
+      "yaml_file": "k8s-configs/inference-cpu-constrained-objectdetection.yaml",
+      "resources": {
+        "cpu_cores": "1",
+        "cpu_memory": "8Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "24000"
+      }
+    },
+    {
+      "pod_name": "inference-memory-constrained-superresolution",
+      "config_name": "memory-constrained",
+      "task": "SuperResolution",
+      "yaml_file": "k8s-configs/inference-memory-constrained-superresolution.yaml",
+      "resources": {
+        "cpu_cores": "8",
+        "cpu_memory": "1Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "24000"
+      }
+    },
+    {
+      "pod_name": "inference-memory-constrained-imagecaptioning",
+      "config_name": "memory-constrained",
+      "task": "ImageCaptioning",
+      "yaml_file": "k8s-configs/inference-memory-constrained-imagecaptioning.yaml",
+      "resources": {
+        "cpu_cores": "8",
+        "cpu_memory": "1Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "24000"
+      }
+    },
+    {
+      "pod_name": "inference-memory-constrained-objectdetection",
+      "config_name": "memory-constrained",
+      "task": "ObjectDetection",
+      "yaml_file": "k8s-configs/inference-memory-constrained-objectdetection.yaml",
+      "resources": {
+        "cpu_cores": "8",
+        "cpu_memory": "1Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "24000"
+      }
+    },
+    {
+      "pod_name": "inference-gpu-memory-constrained-superresolution",
+      "config_name": "gpu-memory-constrained",
+      "task": "SuperResolution",
+      "yaml_file": "k8s-configs/inference-gpu-memory-constrained-superresolution.yaml",
+      "resources": {
+        "cpu_cores": "8",
+        "cpu_memory": "8Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "6000"
+      }
+    },
+    {
+      "pod_name": "inference-gpu-memory-constrained-imagecaptioning",
+      "config_name": "gpu-memory-constrained",
+      "task": "ImageCaptioning",
+      "yaml_file": "k8s-configs/inference-gpu-memory-constrained-imagecaptioning.yaml",
+      "resources": {
+        "cpu_cores": "8",
+        "cpu_memory": "8Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "6000"
+      }
+    },
+    {
+      "pod_name": "inference-gpu-memory-constrained-objectdetection",
+      "config_name": "gpu-memory-constrained",
+      "task": "ObjectDetection",
+      "yaml_file": "k8s-configs/inference-gpu-memory-constrained-objectdetection.yaml",
+      "resources": {
+        "cpu_cores": "8",
+        "cpu_memory": "8Gi",
+        "gpu_fraction": "1.0",
+        "gpu_memory": "6000"
+      }
+    },
+    {
+      "pod_name": "inference-gpu-fraction-constrained-superresolution",
+      "config_name": "gpu-fraction-constrained",
+      "task": "SuperResolution",
+      "yaml_file": "k8s-configs/inference-gpu-fraction-constrained-superresolution.yaml",
+      "resources": {
+        "cpu_cores": "8",
+        "cpu_memory": "8Gi",
+        "gpu_fraction": "0.25",
+        "gpu_memory": "24000"
+      }
+    },
+    {
+      "pod_name": "inference-gpu-fraction-constrained-imagecaptioning",
+      "config_name": "gpu-fraction-constrained",
+      "task": "ImageCaptioning",
+      "yaml_file": "k8s-configs/inference-gpu-fraction-constrained-imagecaptioning.yaml",
+      "resources": {
+        "cpu_cores": "8",
+        "cpu_memory": "8Gi",
+        "gpu_fraction": "0.25",
+        "gpu_memory": "24000"
+      }
+    },
+    {
+      "pod_name": "inference-gpu-fraction-constrained-objectdetection",
+      "config_name": "gpu-fraction-constrained",
+      "task": "ObjectDetection",
+      "yaml_file": "k8s-configs/inference-gpu-fraction-constrained-objectdetection.yaml",
+      "resources": {
+        "cpu_cores": "8",
+        "cpu_memory": "8Gi",
+        "gpu_fraction": "0.25",
+        "gpu_memory": "24000"
+      }
+    }
+  ]
+}

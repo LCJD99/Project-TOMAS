@@ -227,7 +227,7 @@ def check_memory_usage(label):
 @click.option("--gpu_memory", default = "3GB")
 @click.option("--task", default="ImageCaptioning")
 @click.option("--device", default="cuda")
-@click.option("--image_path", default="lena.png")
+@click.option("--image_path", default="data/lenna.jpg")
 def main(gpu_memory, task, device, image_path):
     max_memory_mapping = {
         0: gpu_memory,
