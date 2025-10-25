@@ -163,13 +163,57 @@ class ResourceConstraintExperiment:
             
             try:
                 start_time = time.time()
-                result = subprocess.run(
+                
+                # 使用Popen来实时显示输出
+                process = subprocess.Popen(
                     cmd,
-                    capture_output=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
                     text=True,
-                    timeout=300  # 5分钟超时
+                    bufsize=1,
+                    universal_newlines=True
                 )
+                
+                # 实时读取并显示输出
+                output_lines = []
+                logger.info(f"    开始执行Docker命令...")
+                
+                try:
+                    while True:
+                        output = process.stdout.readline()
+                        if output == '' and process.poll() is not None:
+                            break
+                        if output:
+                            output_line = output.strip()
+                            print(f"    [Docker] {output_line}")  # 实时打印输出
+                            output_lines.append(output_line)
+                    
+                    # 等待进程完成
+                    process.wait(timeout=300)
+                    
+                except subprocess.TimeoutExpired:
+                    logger.warning("    Docker进程执行超时，正在终止...")
+                    process.terminate()
+                    try:
+                        process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
+                    raise
+                
                 end_time = time.time()
+                
+                # 合并所有输出
+                full_output = '\n'.join(output_lines)
+                
+                # 创建类似subprocess.run的结果对象
+                class MockResult:
+                    def __init__(self, returncode, stdout, stderr=""):
+                        self.returncode = returncode
+                        self.stdout = stdout
+                        self.stderr = stderr
+                
+                result = MockResult(process.returncode, full_output)
                 
                 if result.returncode == 0:
                     # 解析输出获取延迟信息
@@ -207,13 +251,14 @@ class ResourceConstraintExperiment:
                         'gpu_memory_limit': config['resources'].get('gpumem', 'N/A'),
                         'docker_execution_time': end_time - start_time,
                         'success': False,
-                        'error_message': result.stderr
+                        'error_message': full_output  # 现在错误信息也在stdout中
                     }
                     
                     results.append(error_result)
-                    logger.error(f"    执行失败: {result.stderr}")
+                    logger.error(f"    执行失败，输出: {full_output[-500:] if len(full_output) > 500 else full_output}")  # 只显示最后500字符
                     
             except subprocess.TimeoutExpired:
+                end_time = time.time()
                 error_result = {
                     'timestamp': datetime.now().isoformat(),
                     'config_name': config['name'],
@@ -224,6 +269,7 @@ class ResourceConstraintExperiment:
                     'memory_limit': config['resources'].get('memory', 'N/A'),
                     'gpu_sm_limit': config['resources'].get('gpu', 'N/A'),
                     'gpu_memory_limit': config['resources'].get('gpumem', 'N/A'),
+                    'docker_execution_time': end_time - start_time,
                     'success': False,
                     'error_message': 'Timeout after 300 seconds'
                 }
