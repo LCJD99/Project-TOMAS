@@ -98,7 +98,7 @@ class ResourceConstraintExperiment:
         
         # GPU内存限制 (HAMi-Core)
         if "gpumem" in resources:
-            cmd.extend(["-e", f"CUDA_DEVICE_MEMORY_LIMIT={resources['gpumem']}m"])
+            cmd.extend(["-e", f"CUDA_DEVICE_MEMORY_LIMIT={resources['gpumem']}"])
         
         # 挂载数据目录
         current_dir = os.getcwd()
@@ -163,6 +163,8 @@ class ResourceConstraintExperiment:
             
             try:
                 start_time = time.time()
+
+                # breakpoint()
                 
                 # 使用Popen来实时显示输出
                 process = subprocess.Popen(
@@ -232,7 +234,7 @@ class ResourceConstraintExperiment:
                         'docker_execution_time': end_time - start_time,
                         # **latency_info,
                         'success': True,
-                        'error_message': None
+                        # 'error_message': None
                     }
                     
                     results.append(experiment_result)
@@ -251,7 +253,7 @@ class ResourceConstraintExperiment:
                         'gpu_memory_limit': config['resources'].get('gpumem', 'N/A'),
                         'docker_execution_time': end_time - start_time,
                         'success': False,
-                        'error_message': full_output  # 现在错误信息也在stdout中
+                        # 'error_message': full_output  # 现在错误信息也在stdout中
                     }
                     
                     results.append(error_result)
@@ -271,7 +273,7 @@ class ResourceConstraintExperiment:
                     'gpu_memory_limit': config['resources'].get('gpumem', 'N/A'),
                     'docker_execution_time': end_time - start_time,
                     'success': False,
-                    'error_message': 'Timeout after 300 seconds'
+                    # 'error_message': 'Timeout after 300 seconds'
                 }
                 
                 results.append(error_result)
@@ -289,7 +291,7 @@ class ResourceConstraintExperiment:
                     'gpu_sm_limit': config['resources'].get('gpu', 'N/A'),
                     'gpu_memory_limit': config['resources'].get('gpumem', 'N/A'),
                     'success': False,
-                    'error_message': str(e)
+                    # 'error_message': str(e)
                 }
                 
                 results.append(error_result)
@@ -357,7 +359,7 @@ class ResourceConstraintExperiment:
         
         # 保存结果
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file = f"experiment_results_{timestamp}.csv"
+        output_file = f"output/experiment_results_{timestamp}.csv"
         self.save_results_to_csv(all_results, output_file)
         
         # 打印统计信息
