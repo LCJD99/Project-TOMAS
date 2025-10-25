@@ -1,0 +1,84 @@
+{
+  "configurations": [
+    {
+      "name": "small-config",
+      "description": "Small resource configuration for lightweight tasks",
+      "resources": {
+        "cpu": "0.5",
+        "memory": "1Gi",
+        "gpu": "0.5",
+        "gpumem": "2000"
+      },
+      "tasks": ["ImageCaptioning"]
+    },
+    {
+      "name": "medium-config",
+      "description": "Medium resource configuration for standard tasks",
+      "resources": {
+        "cpu": "1",
+        "memory": "2Gi",
+        "gpu": "1.0",
+        "gpumem": "4000"
+      },
+      "tasks": ["ImageCaptioning", "SuperResolution"]
+    },
+    {
+      "name": "large-config",
+      "description": "Large resource configuration for heavy tasks",
+      "resources": {
+        "cpu": "2",
+        "memory": "4Gi",
+        "gpu": "1.0",
+        "gpumem": "6000"
+      },
+      "tasks": ["ImageCaptioning", "SuperResolution", "ObjectDetection"]
+    },
+    {
+      "name": "xlarge-config",
+      "description": "Extra large resource configuration for very heavy tasks",
+      "resources": {
+        "cpu": "4",
+        "memory": "8Gi",
+        "gpu": "2.0",
+        "gpumem": "8000"
+      },
+      "tasks": ["SuperResolution", "ObjectDetection"]
+    },
+    {
+      "name": "gpu-intensive-config",
+      "description": "GPU intensive configuration with high GPU memory",
+      "resources": {
+        "cpu": "2",
+        "memory": "4Gi",
+        "gpu": "1.0",
+        "gpumem": "10000"
+      },
+      "tasks": ["ObjectDetection"]
+    },
+    {
+      "name": "cpu-intensive-config",
+      "description": "CPU intensive configuration with more CPU cores",
+      "resources": {
+        "cpu": "8",
+        "memory": "16Gi",
+        "gpu": "1.0",
+        "gpumem": "4000"
+      },
+      "tasks": ["ImageCaptioning", "SuperResolution"]
+    }
+  ],
+  "tasks": {
+    "ImageCaptioning": {
+      "description": "Image captioning task using ViT-GPT2 model",
+      "model": "nlpconnect/vit-gpt2-image-captioning"
+    },
+    "SuperResolution": {
+      "description": "Super resolution task using Swin2SR model",
+      "model": "caidas/swin2SR-classical-sr-x2-64"
+    },
+    "ObjectDetection": {
+      "description": "Object detection task using DETR model",
+      "model": "facebook/detr-resnet-101"
+    }
+  }
+}

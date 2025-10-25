@@ -45,7 +45,7 @@ spec:
       type: Directory
   - name: data-volume
     hostPath: 
-      path: /home/zhangjingzhou/tool-planning/Project-TOMAS/experiments/02_resource-constraint/data
+      path: ./data
       type: Directory
   - name: code-volume
     hostPath: 

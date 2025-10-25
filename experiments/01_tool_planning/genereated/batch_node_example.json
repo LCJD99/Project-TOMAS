@@ -1,0 +1,94 @@
+[
+  [
+    "Text-to-Speech",
+    "Text Generation",
+    "Image Segmentation",
+    "Conversational",
+    "Text-to-Video"
+  ],
+  [
+    "Image Segmentation",
+    "Translation",
+    "Image-to-Text"
+  ],
+  [
+    "Object Detection",
+    "Text-to-Speech",
+    "Visual Question Answering",
+    "Token Classification",
+    "Audio Classification"
+  ],
+  [
+    "Image Editing",
+    "Translation",
+    "Depth Estimation"
+  ],
+  [
+    "Image-to-Text",
+    "Translation",
+    "Conversational"
+  ],
+  [
+    "Image Editing",
+    "Question Answering",
+    "Text-to-Speech",
+    "Image-to-Text",
+    "Object Detection"
+  ],
+  [
+    "Question Answering",
+    "Conversational",
+    "Text Generation",
+    "Summarization"
+  ],
+  [
+    "Document Question Answering",
+    "Depth Estimation",
+    "Object Detection",
+    "Audio Classification",
+    "Translation"
+  ],
+  [
+    "Text Generation",
+    "Conversational",
+    "Question Answering",
+    "Image-to-Text",
+    "Text-to-Image"
+  ],
+  [
+    "Tabular Classification",
+    "Image Classification",
+    "Image-to-Image",
+    "Visual Question Answering"
+  ],
+  [
+    "Object Detection",
+    "Automatic Speech Recognition",
+    "Conversational",
+    "Visual Question Answering",
+    "Text Generation"
+  ],
+  [
+    "Image Editing",
+    "Object Detection",
+    "Sentence Similarity",
+    "Image Classification"
+  ],
+  [
+    "Depth Estimation",
+    "Image-to-Text",
+    "Audio-to-Audio"
+  ],
+  [
+    "Image Segmentation",
+    "Image Editing",
+    "Document Question Answering",
+    "Image-to-Text",
+    "Automatic Speech Recognition"
+  ],
+  [
+    "Image-to-Image",
+    "Document Question Answering",
+    "Audio Classification"
+  ]
+]

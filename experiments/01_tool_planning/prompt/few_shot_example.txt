@@ -1,0 +1,180 @@
+### EXAMPLE ###
+
+### TASK1 ###
+ {'tasks': [{'id': '25512652', 'description': "I have a picture named 'example.jpg' which contains a person wearing a shirt. I'm interested to find out the color of this shirt. After examining the picture, pose a question, 'What is the color of the shirt worn by the person in the picture?' and generate an answer. Further, I have a pre-defined answer - 'This shirt is red.' Do let me know, how similar is your answer to my provided one?"}, {'id': '26669669', 'description': "I was writing an essay on 'Artificial intelligence will greatly impact...' but it's incomplete. There's a text 'The influence of AI on our society will be significant' that seems to carry the message I want. Can you help finish my text and then compare it with the reference to see how similar they are?"}, {'id': '84938121', 'description': "I have been doing some research on Artificial Intelligence and its impacts, and came up with initial idea 'Artificial Intelligence is transforming the world'. Could you assist in drafting a related text and check how closely it mirrors to the idea 'AI is revolutionizing our lives'?"}]}
+
+### RESPONSE1 ###
+{
+  "task_ids": ["255126652", "26669669", "84938121"],
+  "plan": {
+    "task_nodes": [
+      {
+        "node_id": "node_1",
+        "tool_name": "Visual Question Answering",
+        "parameters": [
+          {
+            "task_id": "25512652",
+            "params": {
+              "image": "example.jpg",
+              "question": "What is the color of the shirt worn by the person in the picture?"
+            }
+          }
+        ],
+        "dependencies": [],
+        "original_task_ids": [
+          "25512652"
+        ]
+      },
+      {
+        "node_id": "node_2",
+        "tool_name": "Text Generation",
+        "parameters": [
+          {
+            "task_id": "26669669",
+            "params": {
+              "text": "Artificial intelligence will greatly impact..."
+            }
+          },
+          {
+            "task_id": "84938121",
+            "params": {
+              "text": "Artificial Intelligence is transforming the world"
+            }
+          }
+        ],
+        "dependencies": [],
+        "original_task_ids": [
+          "26669669",
+          "84938121"
+        ]
+      },
+      {
+        "node_id": "node_3",
+        "tool_name": "Sentence Similarity",
+        "parameters": [
+          {
+            "task_id": "25512652",
+            "params": {
+              "text1": "<node_1>",
+              "text2": "This shirt is red."
+            }
+          },
+          {
+            "task_id": "26669669",
+            "params": {
+              "text1": "<node_2>",
+              "text2": "The influence of AI on our society will be significant"
+            }
+          },
+          {
+            "task_id": "84938121",
+            "params": {
+              "text1": "<node_2>",
+              "text2": "AI is revolutionizing our lives"
+            }
+          }
+        ],
+        "dependencies": [
+          "node_1",
+          "node_2"
+        ],
+        "original_task_ids": [
+          "25512652",
+          "26669669",
+          "84938121"
+        ]
+      }
+    ]
+  }
+}
+
+### TASK2 ###
+
+ {'tasks': [{'id': '25231104', 'description': "Suppose I have a photo titled 'example.jpg' and I am curious about the color of the vehicle shown. Can your tool answer the question, 'What is the color of the car in this photo?' Secondly, could you also evaluate how your response compares to the assertion 'The car is blue.'?"}, {'id': '31492454', 'description': "I've taken an interesting photo and saved it as 'example.jpg'. Could you help me come up with a creative caption for the main subject of my photo? I have my own caption here: 'A vibrant scene with colorful balloons floating in the sky'. I'd like to see if your version is similar."}, {'id': '25512652', 'description': "I have a picture named 'example.jpg' which contains a person wearing a shirt. I'm interested to find out the color of this shirt. After examining the picture, pose a question, 'What is the color of the shirt worn by the person in the picture?' and generate an answer. Further, I have a pre-defined answer - 'This shirt is red.' Do let me know, how similar is your answer to my provided one?"}]}
+
+### RESPONSE2 ###
+
+{
+  "task_ids": ["25231104", "31492454", "25512652"],
+  "plan": {
+    "task_nodes": [
+      {
+        "node_id": "node_1",
+        "tool_name": "Visual Question Answering",
+        "parameters": [
+          {
+            "task_id": "25231104",
+            "params": {
+              "image": "example.jpg",
+              "question": "What is the color of the car in this photo?"
+            }
+          },
+          {
+            "task_id": "25512652",
+            "params": {
+              "image": "example.jpg",
+              "question": "What is the color of the shirt worn by the person in the picture?"
+            }
+          }
+        ],
+        "dependencies": [],
+        "original_task_ids": [
+          "25231104",
+          "25512652"
+        ]
+      },
+      {
+        "node_id": "node_2",
+        "tool_name": "Image-to-Text",
+        "parameters": [
+          {
+            "task_id": "31492454",
+            "params": {
+              "image": "example.jpg"
+            }
+          }
+        ],
+        "dependencies": [],
+        "original_task_ids": [
+          "31492454"
+        ]
+      },
+      {
+        "node_id": "node_3",
+        "tool_name": "Sentence Similarity",
+        "parameters": [
+          {
+            "task_id": "25231104",
+            "params": {
+              "text1": "<node_1>",
+              "text2": "The car is blue."
+            }
+          },
+          {
+            "task_id": "31492454",
+            "params": {
+              "text1": "<node_2>",
+              "text2": "A vibrant scene with colorful balloons floating in the sky"
+            }
+          },
+          {
+            "task_id": "25512652",
+            "params": {
+              "text1": "<node_1>",
+              "text2": "This shirt is red."
+            }
+          }
+        ],
+        "dependencies": [
+          "node_1",
+          "node_2"
+        ],
+        "original_task_ids": [
+          "25231104",
+          "31492454",
+          "25512652"
+        ]
+      }
+    ]
+  }
+}
