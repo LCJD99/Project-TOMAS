@@ -116,7 +116,7 @@ class ResourceConstraintExperiment:
             "--task", task,
             "--device", "cuda",
             # "--image_path", f"/app/{image_path}",
-            # "--gpu_memory", resources.get('gpumem', "8g")
+            "--gpu_memory", resources.get('gpumem', "8g")
         ])
         
         return cmd
@@ -320,7 +320,7 @@ class ResourceConstraintExperiment:
         
         logger.info(f"结果已保存到 {output_file}")
     
-    def run_experiments(self, config_filter=None, task_filter=None, image_filter=None, repeat=3):
+    def run_experiments(self, config_filter=None, task_filter=None, image_filter=None, repeat=1):
         """运行完整的实验流程"""
         logger.info("start resource constraint experiments")
         
