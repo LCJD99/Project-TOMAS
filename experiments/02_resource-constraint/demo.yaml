@@ -12,8 +12,8 @@ spec:
   containers:
   - name: demo-container
     image: docker.cnb.cool/lcjd1024/os/mypython
-    command: ["python", "run.py"]
-    # command: ["sleep", "36000"]
+    # command: ["python", "run.py"]
+    command: ["sleep", "36000"]
     volumeMounts:
     - name: cache-volume
       mountPath: /root/.cache/huggingface
@@ -21,22 +21,22 @@ spec:
       mountPath: /app/data
     - name: code-volume
       mountPath: /app/run.py
+    - name: script-volume
+      mountPath: /app/run-all.sh
     resources:
-      requests:
-        cpu: 1
-        memory: 1Gi
-        nvidia.com/gpu: 1.0
-        nvidia.com/gpumem: 6000
       limits:
-        cpu: 1
-        memory: 1Gi
-        nvidia.com/gpu: 1.0
-        nvidia.com/gpumem: 6000
+        cpu: 16
+        memory: 16Gi
+        nvidia.com/gpu: 1
+        nvidia.com/gpucores: 30
+        nvidia.com/gpumem: 2048
     env:
     - name: NVIDIA_VISIBLE_DEVICES
       value: all
     - name: HF_HOME
       value: /root/.cache/huggingface
+    - name: GPU_CORE_UTILIZATION_POLICY
+      value: force
 
   volumes:
   - name: cache-volume
@@ -50,4 +50,8 @@ spec:
   - name: code-volume
     hostPath: 
       path: /home/zhangjingzhou/tool-planning/Project-TOMAS/experiments/02_resource-constraint/inference.py
+      type: File
+  - name: script-volume
+    hostPath: 
+      path: /home/zhangjingzhou/tool-planning/Project-TOMAS/experiments/02_resource-constraint/run-all.sh
       type: File

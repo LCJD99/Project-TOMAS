@@ -72,7 +72,7 @@ def super_resolution(max_memory_mapping, image, device):
         outputs = model(**inputs)
     time1 = time.time()
     # print(f"inference time = {(time1 - start_time):.2f}")
-    
+
 
 # outputs.reconstruction is shape: (B, C, H, W)
     sr_images = []
@@ -224,7 +224,7 @@ def check_memory_usage(label):
     return peak_gpu_memory if gpu_available else 0
 
 @click.command()
-@click.option("--gpu_memory", default = "3GB")
+@click.option("--gpu_memory", default = "24GB")
 @click.option("--task", default="ImageCaptioning")
 @click.option("--device", default="cuda")
 @click.option("--image_path", default="data/lenna.jpg")
@@ -249,6 +249,7 @@ def main(gpu_memory, task, device, image_path):
 
 # super_resolution(max_memory_mapping)
     time1 = time.time()
+    torch.cuda.reset_peak_memory_stats(device_id)
     match task:
         case "ImageCaptioning":
             image_captioning(max_memory_mapping, image, device)
@@ -257,8 +258,7 @@ def main(gpu_memory, task, device, image_path):
         case "ObjectDetection":
             object_detection(max_memory_mapping, image, device)
     time2 = time.time()
-    # peak_after_load = check_memory_usage("After computing")
-    torch.cuda.reset_peak_memory_stats(device_id)
+    check_memory_usage(task)
 
     print(f"{task} end to end time = {(time2 - time1):.2f}")
 
