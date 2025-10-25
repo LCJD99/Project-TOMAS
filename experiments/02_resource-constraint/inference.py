@@ -223,14 +223,46 @@ def check_memory_usage(label):
 
     return peak_gpu_memory if gpu_available else 0
 
+def normalize_memory_size(memory_str):
+    """将内存大小字符串标准化为大写单位格式，并返回90%的大小"""
+    memory_str = memory_str.strip().upper()
+    
+    # 处理不同的单位格式
+    if memory_str.endswith('M'):
+        memory_str = memory_str[:-1] + 'MB'
+    elif memory_str.endswith('G'):
+        memory_str = memory_str[:-1] + 'GB'
+    elif not memory_str.endswith(('MB', 'GB')):
+        # 如果没有单位，默认为GB
+        if memory_str.isdigit():
+            memory_str += 'GB'
+    
+    # 提取数值和单位
+    if memory_str.endswith('GB'):
+        value = float(memory_str[:-2])
+        unit = 'GB'
+    elif memory_str.endswith('MB'):
+        value = float(memory_str[:-2])
+        unit = 'MB'
+    else:
+        raise ValueError(f"Unsupported memory format: {memory_str}")
+    
+    # 计算90%的大小
+    adjusted_value = value * 0.9
+    return f"{int(adjusted_value)}{unit}"
+
 @click.command()
 @click.option("--gpu_memory", default = "24GB")
 @click.option("--task", default="ImageCaptioning")
 @click.option("--device", default="cuda")
 @click.option("--image_path", default="data/lenna.jpg")
 def main(gpu_memory, task, device, image_path):
+    # 标准化GPU内存大小并使用90%
+    normalized_gpu_memory = normalize_memory_size(gpu_memory)
+    print(f"Original GPU memory: {gpu_memory}, Normalized to 90%: {normalized_gpu_memory}")
+    
     max_memory_mapping = {
-        0: gpu_memory,
+        0: normalized_gpu_memory,
         "cpu": "30GB"   # 允许 CPU 使用 30GB
     }
 
