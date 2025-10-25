@@ -22,10 +22,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class ResourceConstraintExperiment:
-    def __init__(self, docker_image, data_path, config_file):
+    def __init__(self, docker_image, config_file):
         self.docker_image = docker_image
         self.results = []
-        self.data_path = Path(data_path)
+        self.data_path = Path("data")
         self.config_file = config_file
 
     def load_configurations(self):
@@ -76,6 +76,8 @@ class ResourceConstraintExperiment:
             "docker", "run", "--rm",
             "--gpus", "all",  # 启用GPU支持
             "-e", "LD_PRELOAD=/libvgpu/build/libvgpu.so",  # HAMi-Core vGPU支持
+            "-e", "HF_HOME=/huggingface_cache",
+            "-v", f"{os.path.expanduser('~')}/.cache/huggingface:/huggingface_cache",
         ]
         
         # CPU限制
@@ -100,8 +102,11 @@ class ResourceConstraintExperiment:
         
         # 挂载数据目录
         current_dir = os.getcwd()
-        cmd.extend(["-v", f"{current_dir}/data:/app/data"])
-        
+        cmd.extend(["-v", f"{current_dir}/data:/app/data",
+                    "-v", f"{current_dir}/inference.py:/app/inference.py",
+                    "-v", f"{current_dir}/vgpulock:/tmp/vgpulock"
+                ])
+
         # Docker镜像
         cmd.append(self.docker_image)
         
@@ -110,8 +115,8 @@ class ResourceConstraintExperiment:
             "python", "inference.py",
             "--task", task,
             "--device", "cuda",
-            "--image_path", f"/app/{image_path}",
-            "--gpu_memory", f"{resources.get('gpumem', '8000')}MB"
+            # "--image_path", f"/app/{image_path}",
+            # "--gpu_memory", resources.get('gpumem', "8g")
         ])
         
         return cmd
@@ -301,6 +306,7 @@ class ResourceConstraintExperiment:
                 
                 for image_path in image_files:
                     results = self.run_single_experiment(config, task, image_path, repeat)
+                    
                     all_results.extend(results)
         
         # 保存结果
@@ -321,10 +327,11 @@ class ResourceConstraintExperiment:
 def main():
     parser = argparse.ArgumentParser(description="资源约束实验执行脚本")
     parser.add_argument("--config", nargs="+", help="指定要运行的配置名称")
+    parser.add_argument("--config-file", default="generated_resource_configurations.json", help="配置文件路径")
     parser.add_argument("--task", nargs="+", help="指定要运行的任务名称")
     parser.add_argument("--image", nargs="+", help="指定要使用的图片文件模式")
-    parser.add_argument("--repeat", type=int, default=3, help="每个实验重复次数")
-    parser.add_argument("--docker-image", default="lcjd1024/os/python3.12-hami:stable", help="Docker镜像名称")
+    parser.add_argument("--repeat", type=int, default=1, help="每个实验重复次数")
+    parser.add_argument("--docker-image", default="model-runner", help="Docker镜像名称")
     parser.add_argument("--verbose", "-v", action="store_true", help="详细输出")
     
     args = parser.parse_args()
@@ -332,7 +339,7 @@ def main():
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
     
-    experiment = ResourceConstraintExperiment(docker_image=args.docker_image)
+    experiment = ResourceConstraintExperiment(docker_image=args.docker_image, config_file=args.config_file)
     
     try:
         results = experiment.run_experiments(
