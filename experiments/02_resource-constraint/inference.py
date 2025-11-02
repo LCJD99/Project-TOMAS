@@ -101,6 +101,7 @@ def image_captioning(max_memory_mapping, image, device):
         model_name,
         device_map="auto",
         max_memory=max_memory_mapping,
+        offload_buffers=True,
         local_files_only=True,
     )
     tokenizer = AutoTokenizer.from_pretrained(
@@ -115,14 +116,12 @@ def image_captioning(max_memory_mapping, image, device):
     ).pixel_values.to(device)
     # peak_after_load = check_memory_usage("after load")
 
-    start_time = time.time()
     with torch.no_grad():
         output_ids = model.generate(
             pixel_values, max_length=40, num_beams=4
         )
     # peak_after_load = check_memory_usage("after compute")
     preds = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
-    end_time = time.time()
     # print(f"image captioning time = {(end_time - start_time):.2f}")
     captions = [p.strip() for p in preds]
 
@@ -249,7 +248,7 @@ def normalize_memory_size(memory_str):
     
     # 计算90%的大小
     adjusted_value = value * 0.9
-    return f"{int(adjusted_value)}{unit}"
+    return f"{adjusted_value:.1f}{unit}"
 
 @click.command()
 @click.option("--gpu_memory", default = "24GB")
