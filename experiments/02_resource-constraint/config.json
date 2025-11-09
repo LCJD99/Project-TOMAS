@@ -1,0 +1,32 @@
+{
+    "task": [
+        "ImageCaptioning",
+        "SuperResolution",
+        "ObjectDetection"
+    ],
+    "cpu_core": [
+        1,
+        2,
+        4,
+        8,
+        16
+    ],
+    "cpu_memory": [
+        "512m",
+        "1g",
+        "2g",
+        "4g"
+    ],
+    "gpu_core": [
+        "5",
+        "20",
+        "50",
+        "80"
+    ],
+    "gpu_memory": [
+        "800m",
+        "1g",
+        "1.5g",
+        "2g"
+    ]
+}

@@ -27,6 +27,29 @@ class ResourceConstraintExperiment:
         self.results = []
         self.data_path = Path("data")
         self.config_file = config_file
+        self.output_file = self._initialize_output_file()
+
+    def _initialize_output_file(self):
+        """初始化输出CSV文件"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = f"output/experiment_results_{timestamp}.csv"
+        
+        # 确保输出目录存在
+        Path("output").mkdir(exist_ok=True)
+        
+        # 创建CSV文件并写入头部
+        fieldnames = [
+            'timestamp', 'config_name', 'task', 'image_file', 'repeat_index',
+            'cpu_cores', 'memory_limit', 'gpu_sm_limit', 'gpu_memory_limit',
+            'docker_execution_time', 'success'
+        ]
+        
+        with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            
+        logger.info(f"初始化输出文件: {output_file}")
+        return output_file
 
     def load_configurations(self):
         try:
@@ -115,7 +138,7 @@ class ResourceConstraintExperiment:
         # Python执行命令
         cmd.extend([
             "python", "inference.py",
-            "--task", "ObjectDetection",
+            "--task", task,
             "--device", "cuda",
             # "--image_path", f"/app/{image_path}",
             "--gpu_memory", resources.get('gpumem', "8g")
@@ -150,6 +173,21 @@ class ResourceConstraintExperiment:
             latency_info['cpu_memory'] = float(cpu_memory_match.group(1))
 
         return latency_info
+
+    def save_single_result_to_csv(self, result):
+        """保存单个实验结果到CSV文件"""
+        fieldnames = [
+            'timestamp', 'config_name', 'task', 'image_file', 'repeat_index',
+            'cpu_cores', 'memory_limit', 'gpu_sm_limit', 'gpu_memory_limit',
+            'docker_execution_time', 'success'
+        ]
+        
+        # 追加模式写入单个结果
+        with open(self.output_file, 'a', newline='', encoding='utf-8') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writerow(result)
+        
+        logger.debug(f"结果已保存到 {self.output_file}")
 
     def run_single_experiment(self, config, task, image_path, repeat=3):
         """运行单个实验配置"""
@@ -239,6 +277,10 @@ class ResourceConstraintExperiment:
                     }
 
                     results.append(experiment_result)
+                    
+                    # 立即保存结果到CSV文件
+                    self.save_single_result_to_csv(experiment_result)
+                    
                     # logger.info(f"    执行成功, 延迟: {latency_info.get('end_to_end_time', 'N/A'):.2f}s")
 
                 else:
@@ -258,6 +300,10 @@ class ResourceConstraintExperiment:
                     }
 
                     results.append(error_result)
+                    
+                    # 立即保存错误结果到CSV文件
+                    self.save_single_result_to_csv(error_result)
+                    
                     logger.error(f"    执行失败，输出: {full_output[-500:] if len(full_output) > 500 else full_output}")  # 只显示最后500字符
 
             except subprocess.TimeoutExpired:
@@ -278,6 +324,10 @@ class ResourceConstraintExperiment:
                 }
 
                 results.append(error_result)
+                
+                # 立即保存超时结果到CSV文件
+                self.save_single_result_to_csv(error_result)
+                
                 logger.error(f"    执行超时")
 
             except Exception as e:
@@ -296,6 +346,10 @@ class ResourceConstraintExperiment:
                 }
 
                 results.append(error_result)
+                
+                # 立即保存异常结果到CSV文件
+                self.save_single_result_to_csv(error_result)
+                
                 logger.error(f"    执行异常: {e}")
 
         return results
@@ -338,6 +392,10 @@ class ResourceConstraintExperiment:
         # 过滤配置
         if config_filter:
             configs = [c for c in configs if c['name'] in config_filter]
+            
+        # 过滤任务
+        if task_filter:
+            configs = [c for c in configs if c['task'] in task_filter]
 
         # 过滤图片
         if image_filter:
@@ -348,27 +406,19 @@ class ResourceConstraintExperiment:
         all_results = []
 
         for config in configs:
-            for task in config['tasks']:
-                # 过滤任务
-                if task_filter and task not in task_filter:
-                    continue
-
-                for image_path in image_files:
-                    results = self.run_single_experiment(config, task, image_path, repeat)
-
-                    all_results.extend(results)
-
-        # 保存结果
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file = f"output/experiment_results_{timestamp}.csv"
-        self.save_results_to_csv(all_results, output_file)
+            # 从配置中获取任务（新格式支持）
+            task = config.get('task', config['tasks'][0])  # 向后兼容
+            
+            for image_path in image_files:
+                results = self.run_single_experiment(config, task, image_path, repeat)
+                all_results.extend(results)
 
         # 打印统计信息
         successful_experiments = sum(1 for r in all_results if r.get('success', False))
         total_experiments = len(all_results)
 
         logger.info(f"实验完成! 成功: {successful_experiments}/{total_experiments}")
-        logger.info(f"结果文件: {output_file}")
+        logger.info(f"结果文件: {self.output_file}")
 
         return all_results
 
