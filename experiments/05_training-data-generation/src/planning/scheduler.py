@@ -75,8 +75,17 @@ class BruteForceScheduler:
     - Dependencies: node can't start until predecessors finish
     """
     
-    def __init__(self, profiler: ResourceProfiler):
+    def __init__(self, profiler: ResourceProfiler, max_combinations: int = 1000000):
+        """
+        Initialize scheduler.
+        
+        Args:
+            profiler: Resource profiler for getting tool configurations
+            max_combinations: Maximum config combinations to explore (default: 1M)
+                             If exceeded, use greedy approach instead
+        """
         self.profiler = profiler
+        self.max_combinations = max_combinations
     
     def schedule(self, dag: DAGAnalyzer, available_resources: ResourceConfig) -> ExecutionPlan:
         """
@@ -91,6 +100,13 @@ class BruteForceScheduler:
         """
         # Get topological levels (returns List[List[str]])
         levels = dag.topological_sort()
+        
+        # Count total combinations
+        total_combinations = self._count_combinations(dag, levels, available_resources)
+        
+        # If too many combinations, use greedy approach
+        if total_combinations > self.max_combinations:
+            return self._greedy_schedule(dag, levels, available_resources)
         
         # Initialize best plan
         best_plan = None
@@ -109,6 +125,88 @@ class BruteForceScheduler:
             raise RuntimeError("No feasible execution plan found")
         
         return best_plan
+    
+    def _count_combinations(self, dag: DAGAnalyzer, 
+                           levels: List[List[str]],
+                           available_resources: ResourceConfig) -> int:
+        """
+        Count total number of configuration combinations.
+        
+        Returns:
+            Total number of combinations to explore
+        """
+        total = 1
+        for level in levels:
+            for node_name in level:
+                if tool_mapper.is_virtual_node(node_name):
+                    continue
+                
+                profiling_tool = tool_mapper.task_to_profiling_name(node_name)
+                if profiling_tool is None:
+                    continue
+                
+                feasible = self.profiler.get_feasible_configs(
+                    profiling_tool, 
+                    available_resources
+                )
+                
+                if not feasible:
+                    return 0
+                
+                total *= len(feasible)
+        
+        return total
+    
+    def _greedy_schedule(self, dag: DAGAnalyzer, 
+                        levels: List[List[str]],
+                        available_resources: ResourceConfig) -> ExecutionPlan:
+        """
+        Greedy scheduling for tasks with too many combinations.
+        
+        For each node, select the fastest feasible configuration.
+        
+        Args:
+            dag: Task DAG structure
+            levels: Topological levels
+            available_resources: Maximum available system resources
+            
+        Returns:
+            ExecutionPlan with greedy assignments
+        """
+        # Build greedy config assignment
+        config_assignment = {}
+        
+        for level in levels:
+            for node_name in level:
+                if tool_mapper.is_virtual_node(node_name):
+                    config_assignment[node_name] = None
+                    continue
+                
+                profiling_tool = tool_mapper.task_to_profiling_name(node_name)
+                if profiling_tool is None:
+                    config_assignment[node_name] = None
+                    continue
+                
+                # Get all feasible configs
+                feasible = self.profiler.get_feasible_configs(
+                    profiling_tool, 
+                    available_resources
+                )
+                
+                if not feasible:
+                    raise RuntimeError(f"No feasible config for {node_name}")
+                
+                # Select the fastest (minimum latency)
+                fastest = min(feasible, key=lambda x: x[1])
+                config_assignment[node_name] = fastest
+        
+        # Simulate execution with greedy assignment
+        plan = self._simulate_execution(dag, levels, config_assignment, available_resources)
+        
+        if plan is None:
+            raise RuntimeError("Greedy scheduling failed")
+        
+        return plan
     
     def _generate_config_assignments(self, dag: DAGAnalyzer, 
                                      levels: List[List[str]],
