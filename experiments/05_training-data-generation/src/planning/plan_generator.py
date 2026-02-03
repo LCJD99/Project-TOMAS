@@ -15,6 +15,8 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Any
 from tqdm import tqdm
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import multiprocessing
 
 # Handle both module import and standalone execution
 if __name__ == "__main__":
@@ -57,10 +59,121 @@ class PlanGenerator:
         self.profiler = profiler
         self.system_state = system_state
         self.num_scenarios = num_scenarios
+        self.seed = seed
         
         # Initialize scheduler and scenario generator
         self.scheduler = BruteForceScheduler(profiler)
         self.scenario_generator = ScenarioGenerator(system_state, seed=seed)
+    
+    @staticmethod
+    def _generate_task_plans_worker(args):
+        """
+        Worker function for parallel task processing.
+        
+        This static method is used by ProcessPoolExecutor to process tasks in parallel.
+        It recreates the necessary objects in each worker process.
+        
+        Args:
+            args: Tuple of (task, profiler_path, system_state, num_scenarios, seed)
+            
+        Returns:
+            Dictionary with task_id and list of plans, or None if error
+        """
+        task, profiler_path, system_state, num_scenarios, worker_seed = args
+        
+        try:
+            # Recreate profiler and generator in worker process (suppress verbose output)
+            profiler = ResourceProfiler(profiler_path, verbose=False)
+            scheduler = BruteForceScheduler(profiler)
+            scenario_generator = ScenarioGenerator(system_state, seed=worker_seed)
+            
+            task_id = task['id']
+            
+            # Parse DAG
+            dag = DAGAnalyzer(task)
+            
+            # Generate resource scenarios
+            scenarios = scenario_generator.generate_scenarios(num_scenarios)
+            
+            # Generate plan for each scenario
+            plans = []
+            for scenario_idx, scenario in enumerate(scenarios):
+                try:
+                    # Schedule task with this scenario's resources
+                    plan = scheduler.schedule(dag, scenario.available)
+                    
+                    # Generate execution language
+                    lang_generator = ExecutionLanguageGenerator(dag, plan)
+                    execution_sequence = lang_generator.generate()
+                    
+                    # Format plan
+                    plan_dict = {
+                        'scenario_id': scenario_idx + 1,
+                        'SYSTEM_STATE': scenario.to_dict(),
+                        'USER_QUESTION': PlanGenerator._format_user_question_static(task),
+                        'PLAN_START': execution_sequence
+                    }
+                    
+                    plans.append(plan_dict)
+                    
+                except Exception as e:
+                    # If scheduling fails for this scenario, skip it
+                    from tqdm import tqdm
+                    tqdm.write(f"Warning: Failed to schedule task {task_id} scenario {scenario_idx + 1}: {e}")
+                    continue
+            
+            return {
+                'task_id': task_id,
+                'plans': plans
+            }
+            
+        except Exception as e:
+            from tqdm import tqdm
+            tqdm.write(f"Error processing task {task.get('id', 'unknown')}: {e}")
+            return None
+    
+    @staticmethod
+    def _format_user_question_static(task: Dict[str, Any]) -> str:
+        """
+        Static version of _format_user_question for use in worker processes.
+        
+        Args:
+            task: Task dictionary
+            
+        Returns:
+            Formatted user question string
+        """
+        # Check if this is a merged task (has T1_, T2_ prefixes)
+        tool_nodes = task.get('tool_nodes', [])
+        
+        # Find non-START nodes
+        real_nodes = [n for n in tool_nodes if n['task'] != 'START']
+        
+        # Check if any node has a prefix (merged task indicator)
+        has_prefixes = any('_' in n['task'] and 
+                          n['task'].split('_')[0].startswith('T') and
+                          n['task'].split('_')[0][1:].isdigit()
+                          for n in real_nodes)
+        
+        if has_prefixes:
+            # Merged task - create numbered list
+            questions = []
+            for i, node in enumerate(real_nodes, 1):
+                # Extract task type (remove prefix)
+                task_name = node['task']
+                if '_' in task_name:
+                    parts = task_name.split('_', 1)
+                    if parts[0].startswith('T') and parts[0][1:].isdigit():
+                        task_name = parts[1]
+                
+                # Create question from task type and arguments
+                args_str = ', '.join(f'"{arg}"' for arg in node.get('arguments', []))
+                questions.append(f"{i}. {task_name}: {args_str}")
+            
+            return '\n'.join(questions)
+        else:
+            # Single task - use instruction
+            return task.get('instruction', '')
     
     def generate_task_plans(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -126,57 +239,54 @@ class PlanGenerator:
         Returns:
             Formatted user question string
         """
-        # Check if this is a merged task (has T1_, T2_ prefixes)
-        tool_nodes = task.get('tool_nodes', [])
-        
-        # Find non-START nodes
-        real_nodes = [n for n in tool_nodes if n['task'] != 'START']
-        
-        # Check if any node has a prefix (merged task indicator)
-        has_prefixes = any('_' in n['task'] and 
-                          n['task'].split('_')[0].startswith('T') and
-                          n['task'].split('_')[0][1:].isdigit()
-                          for n in real_nodes)
-        
-        if has_prefixes:
-            # Merged task - create numbered list
-            questions = []
-            for i, node in enumerate(real_nodes, 1):
-                # Extract task type (remove prefix)
-                task_name = node['task']
-                if '_' in task_name:
-                    parts = task_name.split('_', 1)
-                    if parts[0].startswith('T') and parts[0][1:].isdigit():
-                        task_name = parts[1]
-                
-                # Create question from task type and arguments
-                args_str = ', '.join(f'"{arg}"' for arg in node.get('arguments', []))
-                questions.append(f"{i}. {task_name}: {args_str}")
-            
-            return '\n'.join(questions)
-        else:
-            # Single task - use instruction
-            return task.get('instruction', '')
+        return self._format_user_question_static(task)
     
     def generate_all_plans(self, tasks: List[Dict[str, Any]], 
-                          max_tasks: int = None) -> List[Dict[str, Any]]:
+                          max_tasks: int = None,
+                          num_workers: int = 1,
+                          profiler_path: str = None) -> List[Dict[str, Any]]:
         """
         Generate execution plans for all tasks.
         
         Args:
             tasks: List of task dictionaries
             max_tasks: Maximum number of tasks to process (None = all)
+            num_workers: Number of parallel workers (1 = sequential, >1 = parallel)
+            profiler_path: Path to profiling CSV (required for parallel processing)
+            
+        Returns:
+            List of plan dictionaries
+        """
+        task_limit = max_tasks if max_tasks is not None else len(tasks)
+        tasks_to_process = tasks[:task_limit]
+        
+        if num_workers > 1:
+            # Parallel processing
+            if profiler_path is None:
+                raise ValueError("profiler_path is required for parallel processing")
+            
+            return self._generate_all_plans_parallel(
+                tasks_to_process, num_workers, profiler_path
+            )
+        else:
+            # Sequential processing
+            return self._generate_all_plans_sequential(tasks_to_process)
+    
+    def _generate_all_plans_sequential(self, tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Generate plans sequentially (single-threaded).
+        
+        Args:
+            tasks: List of task dictionaries
             
         Returns:
             List of plan dictionaries
         """
         all_plans = []
         
-        task_limit = max_tasks if max_tasks is not None else len(tasks)
-        
         # Use tqdm for progress bar
-        with tqdm(total=task_limit, desc="Generating plans", unit="task") as pbar:
-            for i, task in enumerate(tasks[:task_limit]):
+        with tqdm(total=len(tasks), desc="Generating plans", unit="task") as pbar:
+            for task in tasks:
                 try:
                     plans = self.generate_task_plans(task)
                     all_plans.append(plans)
@@ -192,6 +302,62 @@ class PlanGenerator:
                     pbar.write(f"Error processing task {task.get('id', 'unknown')}: {e}")
                     pbar.update(1)
                     continue
+        
+        return all_plans
+    
+    def _generate_all_plans_parallel(self, tasks: List[Dict[str, Any]], 
+                                     num_workers: int,
+                                     profiler_path: str) -> List[Dict[str, Any]]:
+        """
+        Generate plans in parallel using multiple processes.
+        
+        Args:
+            tasks: List of task dictionaries
+            num_workers: Number of parallel workers
+            profiler_path: Path to profiling CSV
+            
+        Returns:
+            List of plan dictionaries (in original order)
+        """
+        # Prepare arguments for each task
+        # Use different seeds for each task to ensure diverse scenarios
+        task_args = [
+            (task, profiler_path, self.system_state, self.num_scenarios, self.seed + i)
+            for i, task in enumerate(tasks)
+        ]
+        
+        all_plans = []
+        
+        # Use ProcessPoolExecutor for parallel processing
+        with ProcessPoolExecutor(max_workers=num_workers) as executor:
+            # Submit all tasks
+            future_to_idx = {
+                executor.submit(self._generate_task_plans_worker, args): idx
+                for idx, args in enumerate(task_args)
+            }
+            
+            # Process results with progress bar
+            with tqdm(total=len(tasks), desc="Generating plans", unit="task") as pbar:
+                # Collect results as they complete
+                results = [None] * len(tasks)
+                
+                for future in as_completed(future_to_idx):
+                    idx = future_to_idx[future]
+                    try:
+                        result = future.result()
+                        if result is not None:
+                            results[idx] = result
+                            pbar.set_postfix({
+                                'task_id': result['task_id'][:8],
+                                'plans': len(result['plans'])
+                            })
+                    except Exception as e:
+                        pbar.write(f"Error in worker for task {tasks[idx].get('id', 'unknown')}: {e}")
+                    finally:
+                        pbar.update(1)
+                
+                # Filter out None results and maintain order
+                all_plans = [r for r in results if r is not None]
         
         return all_plans
 

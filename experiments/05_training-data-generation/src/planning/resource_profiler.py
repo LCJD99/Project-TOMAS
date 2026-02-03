@@ -78,12 +78,13 @@ class ResourceConfig:
 class ResourceProfiler:
     """Loads and queries tool performance profiling data."""
     
-    def __init__(self, profiling_csv_path: str):
+    def __init__(self, profiling_csv_path: str, verbose: bool = True):
         """
         Initialize profiler with CSV data.
         
         Args:
             profiling_csv_path: Path to profiling.csv file
+            verbose: Print loading message (default: True)
         """
         self.df = pd.read_csv(profiling_csv_path)
         
@@ -102,7 +103,8 @@ class ResourceProfiler:
             )
             self.latency_map[key] = float(row['latency_ms'])
         
-        print(f"Loaded {len(self.latency_map)} profiling entries")
+        if verbose:
+            print(f"Loaded {len(self.latency_map)} profiling entries")
     
     def get_all_configs(self, tool_name: str, input_size: str = 'small') -> List[Tuple[ResourceConfig, float]]:
         """

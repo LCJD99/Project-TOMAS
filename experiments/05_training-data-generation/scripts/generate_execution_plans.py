@@ -104,6 +104,14 @@ def main():
         help='Number of parallel workers (default: 1). Use 8 for multi-core processing.'
     )
     
+    parser.add_argument(
+        '--task-filter',
+        type=str,
+        choices=['all', 'single', 'multi'],
+        default='all',
+        help='Filter tasks by type: "single" (single_with_start), "multi" (chain/merged/dag), "all" (default: all)'
+    )
+    
     args = parser.parse_args()
     
     # Load input data
@@ -111,12 +119,22 @@ def main():
     
     with open(args.tasks) as f:
         tasks_data = json.load(f)
-        tasks = tasks_data['data']
+        all_tasks = tasks_data['data']
     
     with open(args.system) as f:
         system_state = json.load(f)
     
-    print(f"Loaded {len(tasks)} tasks")
+    # Filter tasks by type
+    if args.task_filter == 'single':
+        tasks = [t for t in all_tasks if t.get('type') == 'single_with_start']
+        print(f"Loaded {len(all_tasks)} tasks, filtered to {len(tasks)} single tasks")
+    elif args.task_filter == 'multi':
+        tasks = [t for t in all_tasks if t.get('type') != 'single_with_start']
+        print(f"Loaded {len(all_tasks)} tasks, filtered to {len(tasks)} multi-step tasks")
+    else:
+        tasks = all_tasks
+        print(f"Loaded {len(tasks)} tasks")
+    
     print(f"System resources: {system_state}")
     
     # Initialize profiler
