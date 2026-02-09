@@ -8,7 +8,7 @@ tool configurations are selected under different resource availability.
 import random
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Mapping, Union
 
 # Handle both module import and standalone execution
 if __name__ == "__main__":
@@ -41,7 +41,7 @@ class ResourceScenario:
 class ScenarioGenerator:
     """Generates resource availability scenarios for a task."""
     
-    def __init__(self, system_state: Dict[str, float], seed: int = 42):
+    def __init__(self, system_state: Mapping[str, Union[int, float]], seed: int = 42):
         """
         Initialize scenario generator.
         
@@ -57,7 +57,13 @@ class ScenarioGenerator:
         )
         self.seed = seed
         random.seed(seed)
-    
+
+    @staticmethod
+    def _quantize_resource(value: float, minimum: int) -> int:
+        """Round resource value to nearest int and enforce minimum."""
+        quantized = int(round(value))
+        return max(minimum, quantized)
+
     def generate_scenarios(self, num_scenarios: int = 3) -> List[ResourceScenario]:
         """
         Generate different resource scenarios.
@@ -94,77 +100,53 @@ class ScenarioGenerator:
     def _generate_high_resource_scenario(self) -> ResourceScenario:
         """Generate high resource scenario (90-100% of max)."""
         factor = random.uniform(0.90, 1.0)
-        
+
         available = ResourceConfig(
-            cpu_core=int(self.max_resources.cpu_core * factor),
-            cpu_mem_gb=self.max_resources.cpu_mem_gb * factor,
-            gpu_sm=int(self.max_resources.gpu_sm * factor),
-            gpu_mem_gb=self.max_resources.gpu_mem_gb * factor
+            cpu_core=self._quantize_resource(self.max_resources.cpu_core * factor, 2),
+            cpu_mem_gb=self._quantize_resource(self.max_resources.cpu_mem_gb * factor, 4),
+            gpu_sm=self._quantize_resource(self.max_resources.gpu_sm * factor, 20),
+            gpu_mem_gb=self._quantize_resource(self.max_resources.gpu_mem_gb * factor, 2)
         )
-        
-        # Ensure at least some resources
-        available.cpu_core = max(2, available.cpu_core)
-        available.cpu_mem_gb = max(4.0, available.cpu_mem_gb)
-        available.gpu_sm = max(20, available.gpu_sm)
-        available.gpu_mem_gb = max(2.0, available.gpu_mem_gb)
-        
+
         return ResourceScenario("high", available)
-    
+
     def _generate_medium_resource_scenario(self) -> ResourceScenario:
         """Generate medium resource scenario (50-70% of max)."""
         factor = random.uniform(0.50, 0.70)
-        
+
         available = ResourceConfig(
-            cpu_core=int(self.max_resources.cpu_core * factor),
-            cpu_mem_gb=self.max_resources.cpu_mem_gb * factor,
-            gpu_sm=int(self.max_resources.gpu_sm * factor),
-            gpu_mem_gb=self.max_resources.gpu_mem_gb * factor
+            cpu_core=self._quantize_resource(self.max_resources.cpu_core * factor, 2),
+            cpu_mem_gb=self._quantize_resource(self.max_resources.cpu_mem_gb * factor, 4),
+            gpu_sm=self._quantize_resource(self.max_resources.gpu_sm * factor, 20),
+            gpu_mem_gb=self._quantize_resource(self.max_resources.gpu_mem_gb * factor, 2)
         )
-        
-        # Ensure at least some resources
-        available.cpu_core = max(2, available.cpu_core)
-        available.cpu_mem_gb = max(4.0, available.cpu_mem_gb)
-        available.gpu_sm = max(20, available.gpu_sm)
-        available.gpu_mem_gb = max(2.0, available.gpu_mem_gb)
-        
+
         return ResourceScenario("medium", available)
-    
+
     def _generate_low_resource_scenario(self) -> ResourceScenario:
         """Generate low resource scenario (30-50% of max)."""
         factor = random.uniform(0.30, 0.50)
-        
+
         available = ResourceConfig(
-            cpu_core=int(self.max_resources.cpu_core * factor),
-            cpu_mem_gb=self.max_resources.cpu_mem_gb * factor,
-            gpu_sm=int(self.max_resources.gpu_sm * factor),
-            gpu_mem_gb=self.max_resources.gpu_mem_gb * factor
+            cpu_core=self._quantize_resource(self.max_resources.cpu_core * factor, 2),
+            cpu_mem_gb=self._quantize_resource(self.max_resources.cpu_mem_gb * factor, 4),
+            gpu_sm=self._quantize_resource(self.max_resources.gpu_sm * factor, 20),
+            gpu_mem_gb=self._quantize_resource(self.max_resources.gpu_mem_gb * factor, 2)
         )
-        
-        # Ensure at least minimum resources
-        available.cpu_core = max(2, available.cpu_core)
-        available.cpu_mem_gb = max(4.0, available.cpu_mem_gb)
-        available.gpu_sm = max(20, available.gpu_sm)
-        available.gpu_mem_gb = max(2.0, available.gpu_mem_gb)
-        
+
         return ResourceScenario("low", available)
-    
+
     def _generate_random_scenario(self, index: int) -> ResourceScenario:
         """Generate a random resource scenario."""
         factor = random.uniform(0.25, 0.95)
-        
+
         available = ResourceConfig(
-            cpu_core=int(self.max_resources.cpu_core * factor),
-            cpu_mem_gb=self.max_resources.cpu_mem_gb * factor,
-            gpu_sm=int(self.max_resources.gpu_sm * factor),
-            gpu_mem_gb=self.max_resources.gpu_mem_gb * factor
+            cpu_core=self._quantize_resource(self.max_resources.cpu_core * factor, 2),
+            cpu_mem_gb=self._quantize_resource(self.max_resources.cpu_mem_gb * factor, 4),
+            gpu_sm=self._quantize_resource(self.max_resources.gpu_sm * factor, 20),
+            gpu_mem_gb=self._quantize_resource(self.max_resources.gpu_mem_gb * factor, 2)
         )
-        
-        # Ensure at least minimum resources
-        available.cpu_core = max(2, available.cpu_core)
-        available.cpu_mem_gb = max(4.0, available.cpu_mem_gb)
-        available.gpu_sm = max(20, available.gpu_sm)
-        available.gpu_mem_gb = max(2.0, available.gpu_mem_gb)
-        
+
         return ResourceScenario(f"scenario_{index}", available)
     
     def generate_diverse_scenarios(self, num_scenarios: int = 3) -> List[ResourceScenario]:
@@ -185,31 +167,31 @@ class ScenarioGenerator:
         # Strategy 1: Favor CPU resources, limit GPU
         if len(scenarios) < num_scenarios:
             available = ResourceConfig(
-                cpu_core=self.max_resources.cpu_core,
-                cpu_mem_gb=self.max_resources.cpu_mem_gb,
-                gpu_sm=int(self.max_resources.gpu_sm * 0.4),
-                gpu_mem_gb=self.max_resources.gpu_mem_gb * 0.4
+                cpu_core=self._quantize_resource(self.max_resources.cpu_core, 2),
+                cpu_mem_gb=self._quantize_resource(self.max_resources.cpu_mem_gb, 4),
+                gpu_sm=self._quantize_resource(self.max_resources.gpu_sm * 0.4, 20),
+                gpu_mem_gb=self._quantize_resource(self.max_resources.gpu_mem_gb * 0.4, 2)
             )
             scenarios.append(ResourceScenario("cpu_favored", available))
-        
+
         # Strategy 2: Favor GPU resources, limit CPU
         if len(scenarios) < num_scenarios:
             available = ResourceConfig(
-                cpu_core=int(self.max_resources.cpu_core * 0.4),
-                cpu_mem_gb=self.max_resources.cpu_mem_gb * 0.4,
-                gpu_sm=self.max_resources.gpu_sm,
-                gpu_mem_gb=self.max_resources.gpu_mem_gb
+                cpu_core=self._quantize_resource(self.max_resources.cpu_core * 0.4, 2),
+                cpu_mem_gb=self._quantize_resource(self.max_resources.cpu_mem_gb * 0.4, 4),
+                gpu_sm=self._quantize_resource(self.max_resources.gpu_sm, 20),
+                gpu_mem_gb=self._quantize_resource(self.max_resources.gpu_mem_gb, 2)
             )
             scenarios.append(ResourceScenario("gpu_favored", available))
-        
+
         # Strategy 3: Balanced but limited
         if len(scenarios) < num_scenarios:
             factor = 0.5
             available = ResourceConfig(
-                cpu_core=int(self.max_resources.cpu_core * factor),
-                cpu_mem_gb=self.max_resources.cpu_mem_gb * factor,
-                gpu_sm=int(self.max_resources.gpu_sm * factor),
-                gpu_mem_gb=self.max_resources.gpu_mem_gb * factor
+                cpu_core=self._quantize_resource(self.max_resources.cpu_core * factor, 2),
+                cpu_mem_gb=self._quantize_resource(self.max_resources.cpu_mem_gb * factor, 4),
+                gpu_sm=self._quantize_resource(self.max_resources.gpu_sm * factor, 20),
+                gpu_mem_gb=self._quantize_resource(self.max_resources.gpu_mem_gb * factor, 2)
             )
             scenarios.append(ResourceScenario("balanced", available))
         
