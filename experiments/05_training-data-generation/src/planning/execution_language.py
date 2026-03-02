@@ -265,7 +265,7 @@ class ExecutionLanguageGenerator:
             # Check if other node's execution overlaps with when we need resources
             # We need to wait for nodes that are still running when we want to start
             if (other_assignment.start_time < assignment.start_time and 
-                other_assignment.end_time > assignment.start_time):
+                other_assignment.end_time >= assignment.start_time):
                 # This node is still running when we want to start
                 if other_name in self.node_to_ref:
                     wait_refs.add(self.node_to_ref[other_name])
