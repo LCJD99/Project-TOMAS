@@ -111,7 +111,8 @@ class PlanGenerator:
                         'scenario_id': scenario_idx + 1,
                         'SYSTEM_STATE': scenario.to_dict(),
                         'USER_QUESTION': PlanGenerator._format_user_question_static(task),
-                        'PLAN_START': execution_sequence
+                        'PLAN_START': execution_sequence,
+                        'total_latency_ms': round(plan.total_latency, 2)
                     }
                     
                     plans.append(plan_dict)
@@ -143,37 +144,28 @@ class PlanGenerator:
         Returns:
             Formatted user question string
         """
-        # Check if this is a merged task (has T1_, T2_ prefixes)
-        tool_nodes = task.get('tool_nodes', [])
+        # Always use the instruction field when present — it contains the full
+        # natural-language question for all task types (single, chain, merged, dag).
+        instruction = task.get('instruction', '')
+        if instruction:
+            return instruction
         
-        # Find non-START nodes
+        # Fallback: reconstruct from tool nodes when no instruction is available.
+        tool_nodes = task.get('tool_nodes', [])
         real_nodes = [n for n in tool_nodes if n['task'] != 'START']
         
-        # Check if any node has a prefix (merged task indicator)
-        has_prefixes = any('_' in n['task'] and 
-                          n['task'].split('_')[0].startswith('T') and
-                          n['task'].split('_')[0][1:].isdigit()
-                          for n in real_nodes)
+        questions = []
+        for i, node in enumerate(real_nodes, 1):
+            task_name = node['task']
+            # Strip Tx_ prefix if present
+            if '_' in task_name:
+                parts = task_name.split('_', 1)
+                if parts[0].startswith('T') and parts[0][1:].isdigit():
+                    task_name = parts[1]
+            args_str = ', '.join(f'"{arg}"' for arg in node.get('arguments', []))
+            questions.append(f"{i}. {task_name}: {args_str}")
         
-        if has_prefixes:
-            # Merged task - create numbered list
-            questions = []
-            for i, node in enumerate(real_nodes, 1):
-                # Extract task type (remove prefix)
-                task_name = node['task']
-                if '_' in task_name:
-                    parts = task_name.split('_', 1)
-                    if parts[0].startswith('T') and parts[0][1:].isdigit():
-                        task_name = parts[1]
-                
-                # Create question from task type and arguments
-                args_str = ', '.join(f'"{arg}"' for arg in node.get('arguments', []))
-                questions.append(f"{i}. {task_name}: {args_str}")
-            
-            return '\n'.join(questions)
-        else:
-            # Single task - use instruction
-            return task.get('instruction', '')
+        return '\n'.join(questions)
     
     def generate_task_plans(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -209,7 +201,8 @@ class PlanGenerator:
                     'scenario_id': scenario_idx + 1,
                     'SYSTEM_STATE': scenario.to_dict(),
                     'USER_QUESTION': self._format_user_question(task),
-                    'PLAN_START': execution_sequence
+                    'PLAN_START': execution_sequence,
+                    'total_latency_ms': round(plan.total_latency, 2)
                 }
                 
                 plans.append(plan_dict)
