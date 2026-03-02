@@ -107,9 +107,9 @@ def main():
     parser.add_argument(
         '--task-filter',
         type=str,
-        choices=['all', 'single', 'multi'],
+        choices=['all', 'single', 'multi', 'merged'],
         default='all',
-        help='Filter tasks by type: "single" (single_with_start), "multi" (chain/merged/dag), "all" (default: all)'
+        help='Filter tasks by type: "single" (single_with_start), "multi" (chain/merged/dag), "merged" (merged only), "all" (default: all)'
     )
     
     args = parser.parse_args()
@@ -131,6 +131,9 @@ def main():
     elif args.task_filter == 'multi':
         tasks = [t for t in all_tasks if t.get('type') != 'single_with_start']
         print(f"Loaded {len(all_tasks)} tasks, filtered to {len(tasks)} multi-step tasks")
+    elif args.task_filter == 'merged':
+        tasks = [t for t in all_tasks if t.get('type') == 'merged']
+        print(f"Loaded {len(all_tasks)} tasks, filtered to {len(tasks)} merged tasks")
     else:
         tasks = all_tasks
         print(f"Loaded {len(tasks)} tasks")
