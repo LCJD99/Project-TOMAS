@@ -103,7 +103,7 @@ def main():
         default=1,
         help='Number of parallel workers (default: 1). Use 8 for multi-core processing.'
     )
-    
+
     parser.add_argument(
         '--task-filter',
         type=str,
@@ -111,19 +111,30 @@ def main():
         default='all',
         help='Filter tasks by type: "single" (single_with_start), "multi" (chain/merged/dag), "merged" (merged only), "all" (default: all)'
     )
-    
+
+    parser.add_argument(
+        '--add-parallel',
+        action='store_true',
+        default=False,
+        help=(
+            'For merged and dag tasks, append an extra forced-parallel plan '
+            'where all independent nodes run concurrently (no <WAIT>). '
+            'Provides contrastive training signal for resource-aware scheduling.'
+        )
+    )
+
     args = parser.parse_args()
-    
+
     # Load input data
     print("Loading input data...")
-    
+
     with open(args.tasks) as f:
         tasks_data = json.load(f)
         all_tasks = tasks_data['data']
-    
+
     with open(args.system) as f:
         system_state = json.load(f)
-    
+
     # Filter tasks by type
     if args.task_filter == 'single':
         tasks = [t for t in all_tasks if t.get('type') == 'single_with_start']
@@ -137,24 +148,27 @@ def main():
     else:
         tasks = all_tasks
         print(f"Loaded {len(tasks)} tasks")
-    
+
     print(f"System resources: {system_state}")
-    
+
     # Initialize profiler
     print(f"\nLoading profiling data from {args.profiling}...")
     profiler = ResourceProfiler(args.profiling)
-    
+
     # Create plan generator
     print(f"\nInitializing plan generator...")
     print(f"  Scenarios per task: {args.scenarios}")
     print(f"  Random seed: {args.seed}")
     print(f"  Parallel workers: {args.workers}")
-    
+    if args.add_parallel:
+        print(f"  Add forced-parallel plan: enabled (merged/dag tasks)")
+
     generator = PlanGenerator(
         profiler=profiler,
         system_state=system_state,
         num_scenarios=args.scenarios,
-        seed=args.seed
+        seed=args.seed,
+        add_parallel_plan=args.add_parallel
     )
     
     # Generate plans

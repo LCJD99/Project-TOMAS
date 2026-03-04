@@ -1,0 +1,18 @@
+Op ::= <EXEC> | <WAIT> | <SYNC> | <GATE> | <FINISH>
+Ref ::= <REF_0> | <REF_1> | ... | <REF_n>
+Tool ::= <TOOL_TOKEN_WITH_CONFIG> (每一个工具+配置都是一个token)
+
+Program ::= Statement* <FINISH> ResultList
+
+Statement ::= ExecStmt | SyncStmt 
+
+ExecStmt ::= Ref = PreCondition? MetaExec
+PreCondition ::= <WAIT> RefList
+MetaExec ::= <EXEC> Tool (ArgumentList)
+
+SyncStmt ::= <SYNC> RefList
+
+ArgumentList ::= (Ref | StaticValue)*
+
+RefList ::= Ref+
+ResultList ::= Ref*

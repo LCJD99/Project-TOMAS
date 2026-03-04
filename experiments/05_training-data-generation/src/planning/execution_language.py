@@ -8,6 +8,7 @@ Generates execution sequences following EBNF grammar with:
 - Data dependencies (both static and dynamic)
 """
 
+import re
 import sys
 from pathlib import Path
 from typing import Dict, List, Set, Optional
@@ -208,9 +209,11 @@ class ExecutionLanguageGenerator:
         """
         args = []
         
-        # Add static arguments from node data
+        # Add static arguments from node data, skipping <node-N> placeholders
+        # (predecessor outputs are appended below via <REF_x>)
         for arg in node.arguments:
-            # Quote string arguments
+            if re.match(r'^<node-\d+>$', str(arg)):
+                continue
             args.append(f'"{arg}"')
         
         # Add dynamic references from predecessors (excluding START)
@@ -282,29 +285,138 @@ class ExecutionLanguageGenerator:
     def _generate_finish_statement(self) -> str:
         """
         Generate <FINISH> statement with output nodes.
-        
+
         Output nodes are nodes with out-degree 0 (no successors).
-        
+
         Returns:
             Finish statement string
         """
         # Get output nodes from DAG
         output_node_names = self.dag.get_output_nodes()
-        
+
         # Convert to reference IDs
         output_refs = []
         for node_name in output_node_names:
             if node_name in self.node_to_ref:
                 output_refs.append(self.node_to_ref[node_name])
-        
+
         # Sort for consistency
         output_refs.sort()
-        
+
         if not output_refs:
             return "<FINISH>"
-        
+
         ref_list = ' '.join(f"<REF_{r}>" for r in output_refs)
         return f"<FINISH> {ref_list}"
+
+    def generate_json(self) -> Dict:
+        """
+        Generate a structured JSON representation of the execution plan.
+
+        Semantically equivalent to the PLAN_START string but in a machine-
+        readable dict format, useful for baseline comparisons.
+
+        Schema::
+
+            {
+                "nodes": [
+                    {
+                        "index": 0,
+                        "tool": "object_detection",   # profiling snake_case name
+                        "arguments": ["example.jpg"], # static args + <node_N> for data deps
+                        "cpu_core": 8,
+                        "cpu_memory": 16.0,
+                        "gpu_sm": 60,
+                        "gpu_memory": 8.0
+                    },
+                    ...
+                ],
+                "links": [          # ALL execution-order edges (data dep + resource-mutex)
+                    {"from": 0, "to": 1},
+                    ...
+                ]
+            }
+
+        ``links`` mirrors the <WAIT> semantics in PLAN_START: a link (A→B)
+        exists whenever B would emit ``<WAIT> <REF_A>`` in the text form.
+        Parallel nodes (no WAIT between them) have no link.
+
+        Returns:
+            Dict ready for JSON serialisation.
+        """
+        # Sort nodes by start time (same order as generate())
+        sorted_assignments = sorted(
+            self.plan.assignments.items(),
+            key=lambda x: x[1].start_time
+        )
+
+        nodes = []
+        for node_name, assignment in sorted_assignments:
+            if tool_mapper.is_virtual_node(node_name):
+                continue
+
+            node = self.dag.get_node(node_name)
+            idx = self.node_to_ref[node_name]
+            profiling_tool = tool_mapper.task_to_profiling_name(node_name) or node_name
+
+            # Build arguments: static values (skip <node-N> placeholders), then
+            # append <node_N> references for each real predecessor (data deps).
+            args: List[str] = []
+            for arg in node.arguments:
+                if re.match(r'^<node-\d+>$', str(arg)):
+                    continue
+                args.append(str(arg))
+
+            for pred_name in sorted(node.predecessors):
+                if tool_mapper.is_virtual_node(pred_name):
+                    continue
+                if pred_name in self.node_to_ref:
+                    args.append(f"<node_{self.node_to_ref[pred_name]}>")
+
+            nodes.append({
+                'index': idx,
+                'tool': profiling_tool,
+                'arguments': args,
+                'cpu_core': assignment.config.cpu_core,
+                'cpu_memory': assignment.config.cpu_mem_gb,
+                'gpu_sm': assignment.config.gpu_sm,
+                'gpu_memory': assignment.config.gpu_mem_gb,
+            })
+
+        # Build links: same logic as _generate_wait_clause — one link per
+        # (predecessor, node) pair where the predecessor's end_time causes
+        # the node to wait (data dep or resource-mutex serialisation).
+        link_set: set = set()
+
+        for node_name, assignment in sorted_assignments:
+            if tool_mapper.is_virtual_node(node_name):
+                continue
+
+            node = self.dag.get_node(node_name)
+            to_idx = self.node_to_ref[node_name]
+            wait_from: set = set()
+
+            # Data dependencies
+            for pred_name in node.predecessors:
+                if not tool_mapper.is_virtual_node(pred_name):
+                    if pred_name in self.node_to_ref:
+                        wait_from.add(self.node_to_ref[pred_name])
+
+            # Resource-mutex serialisation (overlapping time windows)
+            for other_name, other_assignment in self.plan.assignments.items():
+                if other_name == node_name or tool_mapper.is_virtual_node(other_name):
+                    continue
+                if (other_assignment.start_time < assignment.start_time and
+                        other_assignment.end_time >= assignment.start_time):
+                    if other_name in self.node_to_ref:
+                        wait_from.add(self.node_to_ref[other_name])
+
+            for from_idx in wait_from:
+                link_set.add((from_idx, to_idx))
+
+        links = [{'from': f, 'to': t} for f, t in sorted(link_set)]
+
+        return {'nodes': nodes, 'links': links}
 
 
 if __name__ == "__main__":

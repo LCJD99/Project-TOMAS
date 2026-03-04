@@ -143,7 +143,7 @@ def main():
     # Determine paths
     script_dir = Path(__file__).parent
     project_root = script_dir.parent
-    tasks_file = project_root / "data" / "tasks_augmented.json"
+    tasks_file = project_root / "data" / "tasks.json"
     
     if not tasks_file.exists():
         print(f"Error: {tasks_file} not found!")

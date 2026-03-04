@@ -64,6 +64,16 @@ class ScenarioGenerator:
         quantized = int(round(value))
         return max(minimum, quantized)
 
+    def generate_parallel_scenario(self) -> 'ResourceScenario':
+        """
+        Generate a full system-capacity scenario intended for parallel execution.
+
+        Returns a scenario with 100 % of system resources so that the
+        force-parallel scheduler can allocate resources across N simultaneous
+        tool nodes and produce a plan without any <WAIT> clauses.
+        """
+        return ResourceScenario("parallel_full", self.max_resources)
+
     def generate_scenarios(self, num_scenarios: int = 3) -> List[ResourceScenario]:
         """
         Generate different resource scenarios.

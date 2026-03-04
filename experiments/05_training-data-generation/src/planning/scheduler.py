@@ -86,15 +86,86 @@ class BruteForceScheduler:
         """
         self.profiler = profiler
         self.max_combinations = max_combinations
-    
+
+    def schedule_parallel(self, dag: DAGAnalyzer,
+                          system_resources: ResourceConfig) -> ExecutionPlan:
+        """
+        Force parallel execution by dividing system resources equally among
+        independent nodes at each topological level.
+
+        Unlike ``schedule``, this method never compares serial vs parallel
+        latency — it always schedules nodes within the same level concurrently.
+        This is used to generate contrastive training examples where adequate
+        resources allow parallel execution (no <WAIT> clauses).
+
+        Args:
+            dag: Task DAG structure.
+            system_resources: Full system resource capacity used as the budget
+                to be split evenly across parallel nodes.
+
+        Returns:
+            ExecutionPlan where same-level nodes run in parallel.
+        """
+        levels = dag.topological_sort()
+        assignments: Dict[str, ScheduleAssignment] = {}
+        current_time = 0.0
+
+        for level in levels:
+            real_nodes = [n for n in level if not tool_mapper.is_virtual_node(n)]
+            if not real_nodes:
+                continue
+
+            n = len(real_nodes)
+
+            # Divide system resources equally among concurrent nodes.
+            per_node = ResourceConfig(
+                cpu_core=max(2, system_resources.cpu_core // n),
+                cpu_mem_gb=max(4.0, system_resources.cpu_mem_gb / n),
+                gpu_sm=max(20, system_resources.gpu_sm // n),
+                gpu_mem_gb=max(2.0, system_resources.gpu_mem_gb / n)
+            )
+
+            level_end = current_time
+
+            for node_name in real_nodes:
+                profiling_tool = tool_mapper.task_to_profiling_name(node_name)
+                if profiling_tool is None:
+                    continue
+
+                feasible = self.profiler.get_feasible_configs(profiling_tool, per_node)
+                if not feasible:
+                    raise RuntimeError(
+                        f"No feasible config for {node_name} with per-node resources {per_node}"
+                    )
+
+                # Pick fastest config within the per-node budget.
+                fastest_config, latency = min(feasible, key=lambda x: x[1])
+
+                pred_end = self._get_predecessor_end_time(dag, node_name, assignments)
+                start_time = max(current_time, pred_end)
+                end_time = start_time + latency
+
+                assignments[node_name] = ScheduleAssignment(
+                    node_name, fastest_config, start_time, end_time
+                )
+                level_end = max(level_end, end_time)
+
+            current_time = level_end
+
+        if not assignments:
+            raise RuntimeError("No nodes scheduled in parallel plan")
+
+        total_latency = max(a.end_time for a in assignments.values())
+        return ExecutionPlan(assignments, total_latency)
+
     def schedule(self, dag: DAGAnalyzer, available_resources: ResourceConfig) -> ExecutionPlan:
         """
         Generate optimal execution plan for a DAG.
-        
+
         Args:
             dag: Task DAG structure
             available_resources: Maximum available system resources
-            
+
         Returns:
             ExecutionPlan with assignments and total latency
         """

@@ -13,7 +13,7 @@ Outputs execution plans in the required JSON format.
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
@@ -46,21 +46,26 @@ class PlanGenerator:
     """
     
     def __init__(self, profiler: ResourceProfiler, system_state: Dict[str, float],
-                 num_scenarios: int = 3, seed: int = 42):
+                 num_scenarios: int = 3, seed: int = 42,
+                 add_parallel_plan: bool = False):
         """
         Initialize plan generator.
-        
+
         Args:
             profiler: Resource profiler with performance data
             system_state: Maximum system resources
             num_scenarios: Number of scenarios per task
             seed: Random seed for scenario generation
+            add_parallel_plan: When True, merged and dag tasks receive an extra
+                scenario that forces parallel execution of independent nodes.
+                This provides contrastive training signal (no-WAIT vs WAIT).
         """
         self.profiler = profiler
         self.system_state = system_state
         self.num_scenarios = num_scenarios
         self.seed = seed
-        
+        self.add_parallel_plan = add_parallel_plan
+
         # Initialize scheduler and scenario generator
         self.scheduler = BruteForceScheduler(profiler)
         self.scenario_generator = ScenarioGenerator(system_state, seed=seed)
@@ -69,65 +74,88 @@ class PlanGenerator:
     def _generate_task_plans_worker(args):
         """
         Worker function for parallel task processing.
-        
+
         This static method is used by ProcessPoolExecutor to process tasks in parallel.
         It recreates the necessary objects in each worker process.
-        
+
         Args:
-            args: Tuple of (task, profiler_path, system_state, num_scenarios, seed)
-            
+            args: Tuple of (task, profiler_path, system_state, num_scenarios, seed,
+                            add_parallel_plan)
+
         Returns:
             Dictionary with task_id and list of plans, or None if error
         """
-        task, profiler_path, system_state, num_scenarios, worker_seed = args
-        
+        task, profiler_path, system_state, num_scenarios, worker_seed, add_parallel_plan = args
+
         try:
             # Recreate profiler and generator in worker process (suppress verbose output)
             profiler = ResourceProfiler(profiler_path, verbose=False)
             scheduler = BruteForceScheduler(profiler)
             scenario_generator = ScenarioGenerator(system_state, seed=worker_seed)
-            
+
             task_id = task['id']
-            
+
             # Parse DAG
             dag = DAGAnalyzer(task)
-            
+
             # Generate resource scenarios
             scenarios = scenario_generator.generate_scenarios(num_scenarios)
-            
+
             # Generate plan for each scenario
             plans = []
             for scenario_idx, scenario in enumerate(scenarios):
                 try:
                     # Schedule task with this scenario's resources
                     plan = scheduler.schedule(dag, scenario.available)
-                    
+
                     # Generate execution language
                     lang_generator = ExecutionLanguageGenerator(dag, plan)
                     execution_sequence = lang_generator.generate()
-                    
+                    json_format = lang_generator.generate_json()
+
                     # Format plan
                     plan_dict = {
                         'scenario_id': scenario_idx + 1,
                         'SYSTEM_STATE': scenario.to_dict(),
                         'USER_QUESTION': PlanGenerator._format_user_question_static(task),
                         'PLAN_START': execution_sequence,
+                        'json_format': json_format,
                         'total_latency_ms': round(plan.total_latency, 2)
                     }
-                    
+
                     plans.append(plan_dict)
-                    
+
                 except Exception as e:
                     # If scheduling fails for this scenario, skip it
                     from tqdm import tqdm
                     tqdm.write(f"Warning: Failed to schedule task {task_id} scenario {scenario_idx + 1}: {e}")
                     continue
-            
+
+            # Append forced-parallel plan for merged/dag tasks when requested.
+            if add_parallel_plan and task.get('type') in ('merged', 'dag'):
+                try:
+                    parallel_scenario = scenario_generator.generate_parallel_scenario()
+                    parallel_plan = scheduler.schedule_parallel(dag, parallel_scenario.available)
+                    lang_generator = ExecutionLanguageGenerator(dag, parallel_plan)
+                    execution_sequence = lang_generator.generate()
+                    json_format = lang_generator.generate_json()
+                    plans.append({
+                        'scenario_id': len(plans) + 1,
+                        'SYSTEM_STATE': parallel_scenario.to_dict(),
+                        'USER_QUESTION': PlanGenerator._format_user_question_static(task),
+                        'PLAN_START': execution_sequence,
+                        'json_format': json_format,
+                        'total_latency_ms': round(parallel_plan.total_latency, 2)
+                    })
+                except Exception as e:
+                    from tqdm import tqdm
+                    tqdm.write(f"Warning: Failed parallel plan for task {task_id}: {e}")
+
             return {
                 'task_id': task_id,
                 'plans': plans
             }
-            
+
         except Exception as e:
             from tqdm import tqdm
             tqdm.write(f"Error processing task {task.get('id', 'unknown')}: {e}")
@@ -167,53 +195,105 @@ class PlanGenerator:
         
         return '\n'.join(questions)
     
+    def _generate_parallel_plan(self, task: Dict[str, Any], dag: DAGAnalyzer,
+                                scenario_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Generate a forced-parallel execution plan for multi-node tasks.
+
+        Uses full system resources divided evenly among concurrent nodes so
+        that all independent tools start at time 0 with no <WAIT> clauses.
+        This produces contrastive training data: the model sees that abundant
+        resources → parallel (no WAIT), constrained resources → serial (WAIT).
+
+        Args:
+            task: Task dictionary.
+            dag: Pre-parsed DAGAnalyzer for the task.
+            scenario_id: Scenario identifier to assign to the returned plan dict.
+
+        Returns:
+            Plan dict ready for JSON output, or None if generation fails.
+        """
+        try:
+            parallel_scenario = self.scenario_generator.generate_parallel_scenario()
+            plan = self.scheduler.schedule_parallel(dag, parallel_scenario.available)
+
+            lang_generator = ExecutionLanguageGenerator(dag, plan)
+            execution_sequence = lang_generator.generate()
+            json_format = lang_generator.generate_json()
+
+            return {
+                'scenario_id': scenario_id,
+                'SYSTEM_STATE': parallel_scenario.to_dict(),
+                'USER_QUESTION': self._format_user_question(task),
+                'PLAN_START': execution_sequence,
+                'json_format': json_format,
+                'total_latency_ms': round(plan.total_latency, 2)
+            }
+        except Exception as e:
+            from tqdm import tqdm
+            tqdm.write(
+                f"Warning: Failed to generate parallel plan for task {task.get('id', '?')}: {e}"
+            )
+            return None
+
     def generate_task_plans(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate execution plans for a single task.
-        
+
         Args:
             task: Task dictionary from tasks_augmented.json
-            
+
         Returns:
-            Dictionary with task_id and list of plans (one per scenario)
+            Dictionary with task_id and list of plans (one per scenario).
+            For merged/dag tasks when add_parallel_plan is True, an extra
+            forced-parallel plan is appended as the final scenario.
         """
         task_id = task['id']
-        
+
         # Parse DAG
         dag = DAGAnalyzer(task)
-        
+
         # Generate resource scenarios
         scenarios = self.scenario_generator.generate_scenarios(self.num_scenarios)
-        
+
         # Generate plan for each scenario with progress bar
         plans = []
         for scenario_idx, scenario in enumerate(scenarios):
             try:
                 # Schedule task with this scenario's resources
                 plan = self.scheduler.schedule(dag, scenario.available)
-                
+
                 # Generate execution language
                 lang_generator = ExecutionLanguageGenerator(dag, plan)
                 execution_sequence = lang_generator.generate()
-                
+                json_format = lang_generator.generate_json()
+
                 # Format plan
                 plan_dict = {
                     'scenario_id': scenario_idx + 1,
                     'SYSTEM_STATE': scenario.to_dict(),
                     'USER_QUESTION': self._format_user_question(task),
                     'PLAN_START': execution_sequence,
+                    'json_format': json_format,
                     'total_latency_ms': round(plan.total_latency, 2)
                 }
-                
+
                 plans.append(plan_dict)
-                
+
             except Exception as e:
                 # If scheduling fails for this scenario, skip it
                 # Use tqdm.write to avoid interfering with progress bar
                 from tqdm import tqdm
                 tqdm.write(f"Warning: Failed to schedule task {task_id} with scenario {scenario_idx + 1}: {e}")
                 continue
-        
+
+        # For tasks with multiple independent parallel nodes, optionally append
+        # a forced-parallel plan so the model sees a no-WAIT example.
+        if self.add_parallel_plan and task.get('type') in ('merged', 'dag'):
+            parallel_plan = self._generate_parallel_plan(task, dag, len(plans) + 1)
+            if parallel_plan is not None:
+                plans.append(parallel_plan)
+
         return {
             'task_id': task_id,
             'plans': plans
@@ -315,7 +395,8 @@ class PlanGenerator:
         # Prepare arguments for each task
         # Use different seeds for each task to ensure diverse scenarios
         task_args = [
-            (task, profiler_path, self.system_state, self.num_scenarios, self.seed + i)
+            (task, profiler_path, self.system_state, self.num_scenarios,
+             self.seed + i, self.add_parallel_plan)
             for i, task in enumerate(tasks)
         ]
         
